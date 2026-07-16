@@ -51,4 +51,6 @@ void inventory_show(ItemRegistry* itemReg, Inventory* inventory);
 void inventory_hide(Inventory* inventory);
 void inventory_render(BITMAP* scr, Inventory* inventory);
 
+Slot* inventory_get_selected_slot(Inventory* inventory);
+
 #endif

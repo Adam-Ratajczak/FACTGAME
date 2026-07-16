@@ -6,10 +6,9 @@
 #include "hud.h"
 
 #define PLAYER_IDLE 0x0000
-#define PLAYER_WALK_1 0x0001
-#define PLAYER_WALK_2 0x0002
+#define PLAYER_ATTACK 0x0001
+#define PLAYER_MINE 0x0002
 #define PLAYER_BUILD 0x0003
-#define PLAYER_ATTACK 0x0004
 
 typedef struct
 {
@@ -21,8 +20,8 @@ typedef struct
     Box vp;
     Entity* entity;
 
-    int timestamp;
     int state;
+    int walkingState;
 
     Inventory* inventory;
 } Player;
@@ -34,7 +33,7 @@ void player_look_at(Player* player, int wx, int wy);
 void player_move(Player* player, int dx, int dy);
 void player_render(BITMAP* scr, Player* player);
 
-void player_get_texcoords(int type, int* left, int* top);
+void player_get_texcoords(int state, int walkingState, int* left, int* top);
 
 void player_select_hud_slot(Player* player, int slotIndex);
 void player_toggle_inventory(ItemRegistry* itemReg, Player* player);

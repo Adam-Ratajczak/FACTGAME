@@ -45,18 +45,23 @@ ItemRegistry* item_registry_create(void)
 
     strcpy(reg->info[ITEM_STONE].name, "Stone");
     reg->info[ITEM_STONE].maxDurability = 0;
+    reg->info[ITEM_STONE].function = ITEM_FUNCTION_MATERIAL;
 
     strcpy(reg->info[ITEM_COAL].name, "Coal");
     reg->info[ITEM_COAL].maxDurability = 0;
+    reg->info[ITEM_COAL].function = ITEM_FUNCTION_MATERIAL;
 
     strcpy(reg->info[ITEM_RAW_IRON].name, "Iron Ore");
     reg->info[ITEM_RAW_IRON].maxDurability = 0;
+    reg->info[ITEM_RAW_IRON].function = ITEM_FUNCTION_MATERIAL;
 
     strcpy(reg->info[ITEM_RAW_COPPER].name, "Copper Ore");
     reg->info[ITEM_RAW_COPPER].maxDurability = 0;
+    reg->info[ITEM_STONE].function = ITEM_FUNCTION_MATERIAL;
 
     strcpy(reg->info[ITEM_IRON].name, "Iron Plate");
     reg->info[ITEM_IRON].maxDurability = 0;
+    reg->info[ITEM_IRON].function = ITEM_FUNCTION_MATERIAL;
     reg->info[ITEM_IRON].recipe =
         item_recipe_create(
             ITEM_RAW_IRON, 1,
@@ -65,6 +70,7 @@ ItemRegistry* item_registry_create(void)
 
     strcpy(reg->info[ITEM_COPPER].name, "Copper Plate");
     reg->info[ITEM_COPPER].maxDurability = 0;
+    reg->info[ITEM_COPPER].function = ITEM_FUNCTION_MATERIAL;
     reg->info[ITEM_COPPER].recipe =
         item_recipe_create(
             ITEM_RAW_COPPER, 1,
@@ -73,6 +79,7 @@ ItemRegistry* item_registry_create(void)
 
     strcpy(reg->info[ITEM_STONE_BRICK].name, "Stone Brick");
     reg->info[ITEM_STONE_BRICK].maxDurability = 0;
+    reg->info[ITEM_STONE_BRICK].function = ITEM_FUNCTION_MATERIAL;
     reg->info[ITEM_STONE_BRICK].recipe =
         item_recipe_create(
             ITEM_STONE, 2,
@@ -81,6 +88,7 @@ ItemRegistry* item_registry_create(void)
 
     strcpy(reg->info[ITEM_GEAR].name, "Iron Gear");
     reg->info[ITEM_GEAR].maxDurability = 0;
+    reg->info[ITEM_GEAR].function = ITEM_FUNCTION_MATERIAL;
     reg->info[ITEM_GEAR].recipe =
         item_recipe_create(
             ITEM_IRON, 2,
@@ -88,6 +96,7 @@ ItemRegistry* item_registry_create(void)
 
     strcpy(reg->info[ITEM_COPPER_WIRE].name, "Copper Wire");
     reg->info[ITEM_COPPER_WIRE].maxDurability = 0;
+    reg->info[ITEM_COPPER_WIRE].function = ITEM_FUNCTION_MATERIAL;
     reg->info[ITEM_COPPER_WIRE].recipe =
         item_recipe_create(
             ITEM_COPPER, 1,
@@ -95,6 +104,7 @@ ItemRegistry* item_registry_create(void)
 
     strcpy(reg->info[ITEM_CIRCUIT].name, "Circuit");
     reg->info[ITEM_CIRCUIT].maxDurability = 0;
+    reg->info[ITEM_CIRCUIT].function = ITEM_FUNCTION_MATERIAL;
     reg->info[ITEM_CIRCUIT].recipe =
         item_recipe_create(
             ITEM_COPPER_WIRE, 3,
@@ -103,6 +113,7 @@ ItemRegistry* item_registry_create(void)
 
     strcpy(reg->info[ITEM_CONVEYOR_BELT].name, "Conveyor Belt");
     reg->info[ITEM_CONVEYOR_BELT].maxDurability = 0;
+    reg->info[ITEM_CONVEYOR_BELT].function = ITEM_FUNCTION_BLOCK;
     reg->info[ITEM_CONVEYOR_BELT].recipe =
         item_recipe_create(
             ITEM_GEAR, 1,
@@ -111,6 +122,7 @@ ItemRegistry* item_registry_create(void)
 
     strcpy(reg->info[ITEM_CHEST].name, "Chest");
     reg->info[ITEM_CHEST].maxDurability = 0;
+    reg->info[ITEM_CHEST].function = ITEM_FUNCTION_BLOCK;
     reg->info[ITEM_CHEST].recipe =
         item_recipe_create(
             ITEM_STONE_BRICK, 8,
@@ -118,6 +130,7 @@ ItemRegistry* item_registry_create(void)
 
     strcpy(reg->info[ITEM_FURNACE].name, "Furnace");
     reg->info[ITEM_FURNACE].maxDurability = 0;
+    reg->info[ITEM_FURNACE].function = ITEM_FUNCTION_BLOCK;
     reg->info[ITEM_FURNACE].recipe =
         item_recipe_create(
             ITEM_STONE_BRICK, 12,
@@ -126,6 +139,7 @@ ItemRegistry* item_registry_create(void)
 
     strcpy(reg->info[ITEM_MINE].name, "Mining Drill");
     reg->info[ITEM_MINE].maxDurability = 0;
+    reg->info[ITEM_MINE].function = ITEM_FUNCTION_BLOCK;
     reg->info[ITEM_MINE].recipe =
         item_recipe_create(
             ITEM_GEAR, 8,
@@ -133,26 +147,29 @@ ItemRegistry* item_registry_create(void)
             ITEM_CIRCUIT, 3,
             -1);
 
-strcpy(reg->info[ITEM_CRAFTER_HEAD].name, "Crafter Head");
-reg->info[ITEM_CRAFTER_HEAD].maxDurability = 0;
-reg->info[ITEM_CRAFTER_HEAD].recipe =
-    item_recipe_create(
-        ITEM_GEAR, 6,
-        ITEM_CIRCUIT, 5,
-        ITEM_IRON, 10,
-        -1);
+    strcpy(reg->info[ITEM_CRAFTER_HEAD].name, "Crafter Head");
+    reg->info[ITEM_CRAFTER_HEAD].maxDurability = 0;
+    reg->info[ITEM_CRAFTER_HEAD].function = ITEM_FUNCTION_BLOCK;
+    reg->info[ITEM_CRAFTER_HEAD].recipe =
+        item_recipe_create(
+            ITEM_GEAR, 6,
+            ITEM_CIRCUIT, 5,
+            ITEM_IRON, 10,
+            -1);
 
-strcpy(reg->info[ITEM_CRAFTER_MODULE].name, "Crafter Module");
-reg->info[ITEM_CRAFTER_MODULE].maxDurability = 0;
-reg->info[ITEM_CRAFTER_MODULE].recipe =
-    item_recipe_create(
-        ITEM_GEAR, 2,
-        ITEM_CIRCUIT, 2,
-        ITEM_IRON, 6,
-        -1);
+    strcpy(reg->info[ITEM_CRAFTER_MODULE].name, "Crafter Module");
+    reg->info[ITEM_CRAFTER_MODULE].maxDurability = 0;
+    reg->info[ITEM_CRAFTER_MODULE].function = ITEM_FUNCTION_BLOCK;
+    reg->info[ITEM_CRAFTER_MODULE].recipe =
+        item_recipe_create(
+            ITEM_GEAR, 2,
+            ITEM_CIRCUIT, 2,
+            ITEM_IRON, 6,
+            -1);
 
     strcpy(reg->info[ITEM_ATTACK_ORB].name, "Attack Orb");
     reg->info[ITEM_ATTACK_ORB].maxDurability = 256;
+    reg->info[ITEM_ATTACK_ORB].function = ITEM_FUNCTION_WEAPON;
     reg->info[ITEM_ATTACK_ORB].recipe =
         item_recipe_create(
             ITEM_CIRCUIT, 6,
@@ -162,6 +179,7 @@ reg->info[ITEM_CRAFTER_MODULE].recipe =
 
     strcpy(reg->info[ITEM_MINING_ORB].name, "Mining Orb");
     reg->info[ITEM_MINING_ORB].maxDurability = 256;
+    reg->info[ITEM_MINING_ORB].function = ITEM_FUNCTION_TOOL;
     reg->info[ITEM_MINING_ORB].recipe =
         item_recipe_create(
             ITEM_CIRCUIT, 4,
@@ -186,6 +204,7 @@ Item* item_create(ItemRegistry* itemReg, TextureManager* texmgr, int itemId, int
     item->amount = amount;
     item->maxDurability = itemReg->info[itemId].maxDurability;
     item->durability = itemReg->info[itemId].maxDurability;
+    item->function = itemReg->info[itemId].function;
     item->inInventory = 0;
 
     return item;
@@ -210,7 +229,6 @@ void item_render(BITMAP* scr, Item* item, const Box* vp)
     int x = item->sprite->x;
     int y = item->sprite->y;
 
-    /* Amount */
     if (item->amount > 1)
     {
         textprintf_right_ex(
@@ -245,4 +263,12 @@ int item_get_texcoords(int itemId, int* left, int* top){
     *top  = (itemId / 8) * 8;
 
     return 1;
+}
+
+int item_has_function(Item* item, int function){
+    if(!item){
+        return 0;
+    }
+
+    return item->function == function;
 }

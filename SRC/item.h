@@ -23,6 +23,11 @@
 #define ITEM_STONE_BRICK    0x0012
 #define ITEM_COUNT          0x0013
 
+#define ITEM_FUNCTION_WEAPON 0x0
+#define ITEM_FUNCTION_TOOL 0x1
+#define ITEM_FUNCTION_MATERIAL 0x2
+#define ITEM_FUNCTION_BLOCK 0x3
+
 typedef struct {
     int itemId;
     int amount;
@@ -38,6 +43,7 @@ ItemRecipe* item_recipe_create(int firstItemId, ...);
 typedef struct{
     char name[64];
     int maxDurability;
+    int function;
     ItemRecipe* recipe;
 } ItemInfo;
 
@@ -54,6 +60,7 @@ typedef struct{
     int maxDurability;
     int durability;
     int inInventory;
+    int function;
     Entity* sprite;
 } Item;
 
@@ -62,5 +69,7 @@ void item_destroy(Item* item);
 void item_render(BITMAP* scr, Item* item, const Box* vp);
 
 int item_get_texcoords(int itemId, int* left, int* top);
+
+int item_has_function(Item* item, int function);
 
 #endif

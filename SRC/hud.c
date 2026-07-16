@@ -124,6 +124,7 @@ void hud_render(BITMAP* scr, HUD* hud){
 Inventory* inventory_create(ItemRegistry* itemReg, TextureManager* texmgr){
     Inventory* inventory = (Inventory*)malloc(sizeof(Inventory));
     inventory->hud = hud_create(itemReg, texmgr);
+    inventory->shown = 0;
 
     int invHeight = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE;
     int y = (SCREEN_H - invHeight) / 2;
@@ -216,4 +217,17 @@ void inventory_render(BITMAP* scr, Inventory* inventory){
     }
 
     hud_render(scr, inventory->hud);
+}
+
+Slot* inventory_get_selected_slot(Inventory* inventory){
+    if(!inventory){
+        return NULL;
+    }
+
+    int slotIndex = inventory->hud->selected;
+    if(slotIndex < 0 || slotIndex >= INVENTORY_COLS){
+        return NULL;
+    }
+
+    return inventory->hud->slots[slotIndex];
 }

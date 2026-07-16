@@ -53,6 +53,7 @@ void run_game(){
 
     char prev_key[KEY_MAX];
     memset(prev_key, 0, sizeof(prev_key));
+    position_mouse(SCREEN_W / 2, SCREEN_H / 2);
 
     while (!key[KEY_ESC]) {
         poll_mouse();
@@ -61,7 +62,6 @@ void run_game(){
             int mouse_world_x = mouse_x + player->vp.Left;
             int mouse_world_y = mouse_y + player->vp.Top;
             player_look_at(player, mouse_world_x, mouse_world_y);
-
             int dx_input = 0;
             int dy_input = 0;
 
