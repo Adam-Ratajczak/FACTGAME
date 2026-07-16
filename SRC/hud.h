@@ -24,6 +24,7 @@ typedef struct{
 
 Slot* slot_create(TextureManager* texmgr, int purpose, int x, int y, Item* item);
 void slot_destroy(Slot* slot);
+void slot_set_item(Slot* slot, Item* item);
 void slot_render(BITMAP* scr, Slot* slot);
 int slot_get_texcoords(int purpose, int* left, int* top);
 
@@ -52,5 +53,7 @@ void inventory_hide(Inventory* inventory);
 void inventory_render(BITMAP* scr, Inventory* inventory);
 
 Slot* inventory_get_selected_slot(Inventory* inventory);
+
+int inventory_pick_item(Inventory* inventory, Item* item);
 
 #endif

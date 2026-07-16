@@ -1,6 +1,7 @@
 #ifndef MAP_H
 #define MAP_H
 #include "entity.h"
+#include "item.h"
 
 #define CHUNK_SIZE 16
 #define MAX_ZINDEX 4
@@ -21,9 +22,20 @@ typedef struct {
     Tile** Tiles[MAX_ZINDEX];
 } Chunk;
 
+typedef struct{
+    int X;
+    int Y;
+
+    Item** items;
+    int itemCount;
+} DroppedItems;
+
 typedef struct {
     Chunk** Chunks;
     int chunkCount;
+
+    DroppedItems** droppedIems;
+    int droppedItemCount;
 } Map;
 
 Tile* get_tile(Map* map, int X, int Y, int zIndex);
@@ -32,6 +44,9 @@ void set_tile(Map* map, Tile* tile, int X, int Y, int zIndex);
 Map* create_map();
 void render_map(BITMAP* scr, Map* map, Box* vp);
 void destroy_map(Map* map);
+
+void map_drop_item(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, int wx, int wy, int itemId, int amount);
+DroppedItems* map_release_dropped_items(Map* map, int wx, int wy);
 
 Tile* create_tile(TextureManager* texmgr, int tex_id);
 Chunk* get_chunk(Map* map, int chunkX, int chunkY);

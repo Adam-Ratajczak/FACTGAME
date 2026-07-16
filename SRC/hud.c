@@ -3,7 +3,6 @@
 Slot* slot_create(TextureManager* texmgr, int purpose, int x, int y, Item* item){
     Slot* slot = (Slot*)malloc(sizeof(Slot));
     slot->purpose = purpose;
-    slot->item = NULL;
 
     int texLeft, texTop;
     if(!slot_get_texcoords(purpose, &texLeft, &texTop)){
@@ -13,13 +12,7 @@ Slot* slot_create(TextureManager* texmgr, int purpose, int x, int y, Item* item)
 
     slot->sprite = create_entity(x, y, 16, 16);
     add_sprite_to_entity(texmgr, slot->sprite, "ASSETS/TEXTURES/hud.pcx", texLeft, texTop);
-
-    if(item){
-        slot->item = item;
-        slot->item->inInventory = 1;
-        slot->item->sprite->x = x + 4;
-        slot->item->sprite->y = y + 4;
-    }
+    slot_set_item(slot, item);
 
     return slot;
 }
@@ -32,6 +25,21 @@ void slot_destroy(Slot* slot){
     destroy_entity(slot->sprite);
     item_destroy(slot->item);
     free(slot);
+}
+
+void slot_set_item(Slot* slot, Item* item){
+    if(!slot){
+        return;
+    }
+
+    if(item){
+        slot->item = item;
+        slot->item->inInventory = 1;
+        slot->item->sprite->x = slot->sprite->x + 4;
+        slot->item->sprite->y = slot->sprite->y + 4;
+    }else{
+        slot->item = NULL;
+    }
 }
 
 void slot_render(BITMAP* scr, Slot* slot){
@@ -230,4 +238,60 @@ Slot* inventory_get_selected_slot(Inventory* inventory){
     }
 
     return inventory->hud->slots[slotIndex];
+}
+
+int inventory_pick_item(Inventory* inventory, Item* item)
+{
+    if (!inventory || !item)
+        return 0;
+
+    if (item_is_stackable(item))
+    {
+        for (int i = 0; i < INVENTORY_COLS * INVENTORY_ROWS; ++i)
+        {
+            Slot* slot = inventory->slots[i];
+
+            if (!slot || !slot->item)
+                continue;
+
+            if (slot->item->itemId != item->itemId)
+                continue;
+
+            if (slot->item->amount >= ITEM_STACK_SIZE)
+                continue;
+
+            int freeSpace = ITEM_STACK_SIZE - slot->item->amount;
+
+            if (item->amount <= freeSpace)
+            {
+                slot->item->amount += item->amount;
+                return 1;
+            }
+
+            slot->item->amount = ITEM_STACK_SIZE;
+            item->amount -= freeSpace;
+        }
+    }
+
+    for (int i = 0; i < INVENTORY_COLS * INVENTORY_ROWS; ++i)
+    {
+        Slot* slot = inventory->slots[i];
+
+        if (!slot || slot->item)
+            continue;
+
+        if (!item_is_stackable(item))
+        {
+            if (item->amount != 1)
+                return 0;
+
+            slot_set_item(slot, item);
+            return 1;
+        }
+
+        slot_set_item(slot, item);
+        return 1;
+    }
+
+    return 0;
 }

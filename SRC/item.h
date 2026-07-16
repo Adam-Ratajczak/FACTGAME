@@ -28,6 +28,8 @@
 #define ITEM_FUNCTION_MATERIAL 0x2
 #define ITEM_FUNCTION_BLOCK 0x3
 
+#define ITEM_STACK_SIZE 64
+
 typedef struct {
     int itemId;
     int amount;
@@ -71,5 +73,6 @@ void item_render(BITMAP* scr, Item* item, const Box* vp);
 int item_get_texcoords(int itemId, int* left, int* top);
 
 int item_has_function(Item* item, int function);
+int item_is_stackable(Item* item);
 
 #endif

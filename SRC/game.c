@@ -54,6 +54,7 @@ void run_game(){
     char prev_key[KEY_MAX];
     memset(prev_key, 0, sizeof(prev_key));
     position_mouse(SCREEN_W / 2, SCREEN_H / 2);
+    int prev_mouse_b = 0;
 
     while (!key[KEY_ESC]) {
         poll_mouse();
@@ -80,10 +81,19 @@ void run_game(){
             if (KEY_PRESSED(KEY_E))
                 player_toggle_inventory(itemReg, player);
 
+            if (KEY_PRESSED(KEY_R))
+                player_pick_items(map, player);
+
             if (dx_input != 0 || dy_input != 0) {
                 player_move(player, dx_input, dy_input);
 
                 ensure_visible_chunks(texmgr, map, &player->vp);
+            }
+
+            if (mouse_b != prev_mouse_b)
+            {
+                player_mouse_action(itemReg, texmgr, map, player, mouse_x, mouse_y, mouse_b);
+                prev_mouse_b = mouse_b;
             }
 
             player_update(texmgr, player);

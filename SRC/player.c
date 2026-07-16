@@ -99,7 +99,6 @@ void player_move(Player* player, int dx, int dy) {
 
     player->x += (int)(move_x + 0.5);
     player->y += (int)(move_y + 0.5);
-    log_debug("Player coords: (%d, %d)", player->x, player->y);
 
     if(player->walkingState == 0){
         player->walkingState = 1;
@@ -162,4 +161,65 @@ void player_toggle_inventory(ItemRegistry* itemReg, Player* player){
     }else{
         inventory_show(itemReg, player->inventory);
     }
+}
+
+void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int x, int y, int button){
+    if(!map || !player){
+        return;
+    }
+
+    if(player->inventory->shown){
+
+    }else{
+        int wx = x + player->vp.Left;
+        int wy = y + player->vp.Top;
+        if(button & 1){
+            if(player->state == PLAYER_MINE){
+                if((player->x - wx) * (player->x - wx) + (player->y - wy) * (player->y - wy) <= PLAYER_MINING_RADIUS * PLAYER_MINING_RADIUS){
+                    int tx = wx / TILE_SIZE;
+                    int ty = wy / TILE_SIZE;
+
+                    Tile* tile_ground = get_tile(map, tx, ty, ZINDEX_GROUND);
+                    Tile* tile_ore = get_tile(map, tx, ty, ZINDEX_ORES);
+                    if(tile_ore){
+                        log_debug("Ore");
+                        if(tile_ore->TexID == BLOCK_ORE_COAL){
+                            map_drop_item(itemReg, texmgr, map, tx, ty, ITEM_COAL, 1);
+                        }else if(tile_ore->TexID == BLOCK_ORE_IRON){
+                            map_drop_item(itemReg, texmgr, map, tx, ty, ITEM_RAW_IRON, 1);
+                        }else if(tile_ore->TexID == BLOCK_ORE_COPPER){
+                            map_drop_item(itemReg, texmgr, map, tx, ty, ITEM_RAW_COPPER, 1);
+                        }
+                    }else if(tile_ground){
+                        log_debug("Ground");
+                        if(tile_ground->TexID == BLOCK_STONE){
+                            map_drop_item(itemReg, texmgr, map, tx, ty, ITEM_STONE, 1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void player_pick_items(Map* map, Player* player){
+    if(!map || !player){
+        return;
+    }
+
+    int tx = player->x / TILE_SIZE;
+    int ty = player->y / TILE_SIZE;
+    DroppedItems* items = map_release_dropped_items(map, tx, ty);
+    if(!items){
+        return;
+    }
+
+    for(int i = 0; i < items->itemCount; i++){
+        if(!inventory_pick_item(player->inventory, items->items[i])){
+            item_destroy(items->items[i]);
+        }
+    }
+
+    free(items->items);
+    free(items);
 }

@@ -221,10 +221,20 @@ void item_render(BITMAP* scr, Item* item, const Box* vp)
     if (!scr || !item)
         return;
 
-    render_entity(scr, item->sprite, vp);
 
-    if (!item->inInventory)
+    if (!item->inInventory){
+        int x = item->sprite->x - vp->Left;
+        int y = item->sprite->y - vp->Top;
+
+        rect(scr,
+            x - 1, y - 1,
+            x + item->sprite->w * item->sprite->scale,
+            y + item->sprite->h * item->sprite->scale,
+            makecol(0, 0, 0));
+        render_entity(scr, item->sprite, vp);
         return;
+    }
+    render_entity(scr, item->sprite, vp);
 
     int x = item->sprite->x;
     int y = item->sprite->y;
@@ -271,4 +281,8 @@ int item_has_function(Item* item, int function){
     }
 
     return item->function == function;
+}
+
+int item_is_stackable(Item* item){
+    return item_has_function(item, ITEM_FUNCTION_TOOL) == 0 && item_has_function(item, ITEM_FUNCTION_WEAPON) == 0;
 }

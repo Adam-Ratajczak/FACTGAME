@@ -50,6 +50,8 @@ Map* create_map(){
     Map* map = (Map*)malloc(sizeof(Map));
     map->chunkCount = 0;
     map->Chunks = NULL;
+    map->droppedItemCount = 0;
+    map->droppedIems = NULL;
 
     return map;
 }
@@ -74,6 +76,12 @@ void render_map(BITMAP* scr, Map* map, Box* vp){
             }
         }
     }
+
+    for(int i = 0; i < map->droppedItemCount; i++){
+        for(int j = 0; j < map->droppedIems[i]->itemCount; j++){
+            item_render(scr, map->droppedIems[i]->items[j], vp);
+        }
+    }
 }
 
 void destroy_map(Map* map){
@@ -93,6 +101,15 @@ void destroy_map(Map* map){
         free(map->Chunks[i]);
     }
     free(map->Chunks);
+
+    for(int i = 0; i < map->droppedItemCount; i++){
+        for(int j = 0; j < map->droppedIems[i]->itemCount; j++){
+            item_destroy(map->droppedIems[i]->items[j]);
+        }
+        free(map->droppedIems[i]->items);
+        free(map->droppedIems[i]);
+    }
+    free(map->droppedIems);
     free(map);
 }
 
@@ -283,4 +300,104 @@ int is_chunk_in_vp(Chunk* chunk, Box* vp){
 
     return (wx1 < vp_right && wx2 > vp->Left &&
             wy1 < vp_bottom && wy2 > vp->Top);
+}
+
+void map_drop_item(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, int wx, int wy, int itemId, int amount){
+    if (!map || amount <= 0)
+        return;
+
+
+    DroppedItems* drop = NULL;
+
+    for (int i = 0; i < map->droppedItemCount; ++i)
+    {
+        if (map->droppedIems[i]->X == wx &&
+            map->droppedIems[i]->Y == wy)
+        {
+            drop = map->droppedIems[i];
+            break;
+        }
+    }
+
+    if (!drop)
+    {
+        DroppedItems** grown = realloc(map->droppedIems, (map->droppedItemCount + 1) * sizeof(*map->droppedIems));
+
+        if (!grown)
+            return;
+
+        map->droppedIems = grown;
+
+        drop = calloc(1, sizeof(*drop));
+        if (!drop)
+            return;
+
+        drop->X = wx;
+        drop->Y = wy;
+
+        map->droppedIems[map->droppedItemCount++] = drop;
+    }
+
+    for (int i = 0; i < drop->itemCount; ++i)
+    {
+        if (drop->items[i]->itemId == itemId)
+        {
+            drop->items[i]->amount += amount;
+            return;
+        }
+    }
+
+    Item** grown = realloc(drop->items, (drop->itemCount + 1) * sizeof(*drop->items));
+
+    if (!grown)
+        return;
+
+    drop->items = grown;
+
+    Item* item = item_create(itemReg, texmgr, itemId, amount);
+    if (!item)
+        return;
+
+    item->sprite->x = wx * TILE_SIZE + 4;
+    item->sprite->y = wy * TILE_SIZE + 4;
+    item->inInventory = 0;
+
+    drop->items[drop->itemCount++] = item;
+    log_debug("Dropped %x at (%d, %d)", itemId, item->sprite->x, item->sprite->y);
+}
+
+DroppedItems* map_release_dropped_items(Map* map, int wx, int wy)
+{
+    if (!map)
+        return NULL;
+
+    for (int i = 0; i < map->droppedItemCount; ++i)
+    {
+        DroppedItems* drop = map->droppedIems[i];
+
+        if (drop->X != wx || drop->Y != wy)
+            continue;
+
+        for (int j = i + 1; j < map->droppedItemCount; ++j)
+            map->droppedIems[j - 1] = map->droppedIems[j];
+
+        map->droppedItemCount--;
+
+        if (map->droppedItemCount == 0)
+        {
+            free(map->droppedIems);
+            map->droppedIems = NULL;
+        }
+        else
+        {
+            DroppedItems** grown = realloc(map->droppedIems, map->droppedItemCount * sizeof(*map->droppedIems));
+
+            if (grown)
+                map->droppedIems = grown;
+        }
+
+        return drop;
+    }
+
+    return NULL;
 }
