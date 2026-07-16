@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "DJGPP: Clean (factgame)",
+      "type": "shell",
+      "command": "\"C:\\DOSBox-X\\dosbox-x.exe\" -conf \"${workspaceFolder}/CONF/dosbox-x-clean.conf\"",
+      "problemMatcher": []
+    },
+    {
+      "label": "DJGPP: Build (factgame)",
+      "type": "shell",
+      "command": "\"C:\\DOSBox-X\\dosbox-x.exe\" -conf \"${workspaceFolder}/CONF/dosbox-x-build.conf\"",
+      "problemMatcher": []
+    },
+    {
+      "label": "DJGPP: Run (factgame)",
+      "type": "shell",
+      "command": "\"C:\\DOSBox-X\\dosbox-x.exe\" -conf \"${workspaceFolder}/CONF/dosbox-x-run.conf\"",
+      "problemMatcher": []
+    },
+    {
+      "label": "DJGPP: Build and run (factgame)",
+      "type": "shell",
+      "command": "\"C:\\DOSBox-X\\dosbox-x.exe\" -conf \"${workspaceFolder}/CONF/dosbox-x-buildandrun.conf\"",
+      "problemMatcher": []
+    },
+    {
+      "label": "DJGPP: Open interactive DOSBox-X",
+      "type": "shell",
+      "command": "\"C:\\DOSBox-X\\dosbox-x.exe\"",
+      "problemMatcher": []
+    }
+  ]
+}
