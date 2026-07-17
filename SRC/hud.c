@@ -134,6 +134,12 @@ Inventory* inventory_create(ItemRegistry* itemReg, TextureManager* texmgr){
     Inventory* inventory = (Inventory*)malloc(sizeof(Inventory));
     inventory->hud = hud_create(itemReg, texmgr);
     inventory->shown = 0;
+    inventory->renderCache = NULL;
+    inventory->renderSignature = 0;
+    inventory->renderCacheLeft = 0;
+    inventory->renderCacheTop = 0;
+    inventory->renderCacheWidth = 0;
+    inventory->renderCacheHeight = 0;
     inventory->hoveredInfo = NULL;
 
     int invHeight = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE;
@@ -175,6 +181,10 @@ void inventory_destroy(Inventory* inventory){
         }
     }
 
+    if (inventory->renderCache) {
+        destroy_bitmap(inventory->renderCache);
+    }
+
     free(inventory);
 }
 
@@ -189,6 +199,7 @@ void inventory_show(ItemRegistry* itemReg, Inventory* inventory){
     }
 
     inventory->shown = 1;
+    inventory->renderSignature = 0;
     if(inventory->hud->selected != -1){
         Slot* selSlot = inventory->hud->slots[inventory->hud->selected];
         selSlot->sprite->x += 2;
@@ -200,6 +211,7 @@ void inventory_show(ItemRegistry* itemReg, Inventory* inventory){
 }
 void inventory_hide(Inventory* inventory){
     inventory->shown = 0;
+    inventory->renderSignature = 0;
     if(inventory->hud->selected != -1){
         Slot* selSlot = inventory->hud->slots[inventory->hud->selected];
         selSlot->sprite->x -= 2;
@@ -208,11 +220,185 @@ void inventory_hide(Inventory* inventory){
     }
 }
 
-void inventory_render(BITMAP* scr, Inventory* inventory){
-    if(!scr || !inventory){
-        return;
+static unsigned long slot_render_signature(Slot* slot)
+{
+    unsigned long sig = 2166136261u;
+
+    if (!slot)
+        return sig;
+
+    sig = (sig ^ (unsigned long)slot->purpose) * 16777619u;
+    sig = (sig ^ (unsigned long)slot->sprite->x) * 16777619u;
+    sig = (sig ^ (unsigned long)slot->sprite->y) * 16777619u;
+    sig = (sig ^ (unsigned long)(slot->sprite->scale * 100.0f)) * 16777619u;
+
+    if (slot->item) {
+        sig = (sig ^ (unsigned long)(slot->item->itemId + 1)) * 16777619u;
+        sig = (sig ^ (unsigned long)slot->item->amount) * 16777619u;
+        sig = (sig ^ (unsigned long)slot->item->durability) * 16777619u;
     }
 
+    return sig;
+}
+
+static unsigned long inventory_render_signature(Inventory* inventory)
+{
+    unsigned long sig = 2166136261u;
+
+    sig = (sig ^ (unsigned long)inventory->shown) * 16777619u;
+    sig = (sig ^ (unsigned long)(inventory->hud ? inventory->hud->selected + 1 : 0)) * 16777619u;
+
+    if (inventory->shown) {
+        for(int i = 0; i < CRAFTING_ROWS * INVENTORY_COLS; ++i)
+            sig = (sig ^ slot_render_signature(inventory->crafting[i])) * 16777619u;
+
+        for(int i = 0; i < INVENTORY_ROWS * INVENTORY_COLS; ++i)
+            sig = (sig ^ slot_render_signature(inventory->slots[i])) * 16777619u;
+    }
+
+    for(int i = 0; i < INVENTORY_COLS; ++i)
+        sig = (sig ^ slot_render_signature(inventory->hud->slots[i])) * 16777619u;
+
+    return sig;
+}
+
+static void expand_slot_bounds(Slot* slot, int* left, int* top, int* right, int* bottom)
+{
+    if (!slot || !slot->sprite)
+        return;
+
+    int slotRight = slot->sprite->x + (int)(slot->sprite->w * slot->sprite->scale) + 1;
+    int slotBottom = slot->sprite->y + (int)(slot->sprite->h * slot->sprite->scale) + 1;
+
+    if (slot->sprite->x < *left) *left = slot->sprite->x;
+    if (slot->sprite->y < *top) *top = slot->sprite->y;
+    if (slotRight > *right) *right = slotRight;
+    if (slotBottom > *bottom) *bottom = slotBottom;
+
+    if (slot->item && slot->item->sprite) {
+        int itemRight = slot->item->sprite->x + slot->item->sprite->w + 10;
+        int itemBottom = slot->item->sprite->y + slot->item->sprite->h + 2;
+
+        if (slot->item->sprite->x < *left) *left = slot->item->sprite->x;
+        if (slot->item->sprite->y < *top) *top = slot->item->sprite->y;
+        if (itemRight > *right) *right = itemRight;
+        if (itemBottom > *bottom) *bottom = itemBottom;
+    }
+}
+
+static void inventory_get_render_bounds(Inventory* inventory, int* left, int* top, int* width, int* height)
+{
+    int right = 0;
+    int bottom = 0;
+
+    *left = SCREEN_W;
+    *top = SCREEN_H;
+
+    if (inventory->shown) {
+        for(int i = 0; i < CRAFTING_ROWS * INVENTORY_COLS; ++i)
+            expand_slot_bounds(inventory->crafting[i], left, top, &right, &bottom);
+
+        for(int i = 0; i < INVENTORY_ROWS * INVENTORY_COLS; ++i)
+            expand_slot_bounds(inventory->slots[i], left, top, &right, &bottom);
+    }
+
+    for(int i = 0; i < INVENTORY_COLS; ++i)
+        expand_slot_bounds(inventory->hud->slots[i], left, top, &right, &bottom);
+
+    *left -= 4;
+    *top -= 4;
+    right += 4;
+    bottom += 4;
+
+    if (*left < 0) *left = 0;
+    if (*top < 0) *top = 0;
+    if (right > SCREEN_W) right = SCREEN_W;
+    if (bottom > SCREEN_H) bottom = SCREEN_H;
+
+    *width = right - *left;
+    *height = bottom - *top;
+
+    if (*width <= 0) *width = 1;
+    if (*height <= 0) *height = 1;
+}
+
+static void slot_render_shifted(BITMAP* scr, Slot* slot, int originX, int originY)
+{
+    if (!slot)
+        return;
+
+    int slotX = slot->sprite->x;
+    int slotY = slot->sprite->y;
+    int itemX = 0;
+    int itemY = 0;
+
+    slot->sprite->x -= originX;
+    slot->sprite->y -= originY;
+
+    if (slot->item) {
+        itemX = slot->item->sprite->x;
+        itemY = slot->item->sprite->y;
+        slot->item->sprite->x -= originX;
+        slot->item->sprite->y -= originY;
+    }
+
+    slot_render(scr, slot);
+
+    slot->sprite->x = slotX;
+    slot->sprite->y = slotY;
+
+    if (slot->item) {
+        slot->item->sprite->x = itemX;
+        slot->item->sprite->y = itemY;
+    }
+}
+
+static int inventory_rebuild_render_cache(Inventory* inventory, unsigned long signature)
+{
+    inventory_get_render_bounds(
+        inventory,
+        &inventory->renderCacheLeft,
+        &inventory->renderCacheTop,
+        &inventory->renderCacheWidth,
+        &inventory->renderCacheHeight);
+
+    if (inventory->renderCache &&
+        (inventory->renderCache->w != inventory->renderCacheWidth ||
+         inventory->renderCache->h != inventory->renderCacheHeight)) {
+        destroy_bitmap(inventory->renderCache);
+        inventory->renderCache = NULL;
+    }
+
+    if (!inventory->renderCache) {
+        inventory->renderCache = create_bitmap(inventory->renderCacheWidth, inventory->renderCacheHeight);
+        if (!inventory->renderCache)
+            return 0;
+    }
+
+    clear_to_color(inventory->renderCache, inventory->renderCache->vtable->mask_color);
+
+    if(inventory->shown){
+        for(int i = 0; i < CRAFTING_ROWS; ++i){
+            for(int j = 0; j < INVENTORY_COLS; ++j){
+                slot_render_shifted(inventory->renderCache, inventory->crafting[i * INVENTORY_COLS + j], inventory->renderCacheLeft, inventory->renderCacheTop);
+            }
+        }
+        for(int i = 0; i < INVENTORY_ROWS; ++i){
+            for(int j = 0; j < INVENTORY_COLS; ++j){
+                slot_render_shifted(inventory->renderCache, inventory->slots[i * INVENTORY_COLS + j], inventory->renderCacheLeft, inventory->renderCacheTop);
+            }
+        }
+    }
+
+    for(int index = 0; index < INVENTORY_COLS; ++index){
+        slot_render_shifted(inventory->renderCache, inventory->hud->slots[index], inventory->renderCacheLeft, inventory->renderCacheTop);
+    }
+    inventory->renderSignature = signature;
+    return 1;
+}
+
+static void inventory_render_uncached(BITMAP* scr, Inventory* inventory)
+{
     if(inventory->shown){
         for(int i = 0; i < CRAFTING_ROWS; ++i){
             for(int j = 0; j < INVENTORY_COLS; ++j){
@@ -227,6 +413,33 @@ void inventory_render(BITMAP* scr, Inventory* inventory){
     }
 
     hud_render(scr, inventory->hud);
+}
+
+void inventory_render(BITMAP* scr, Inventory* inventory){
+    if(!scr || !inventory){
+        return;
+    }
+
+    unsigned long signature = inventory_render_signature(inventory);
+    int renderedUncached = 0;
+    if (inventory->renderSignature != signature) {
+        if (!inventory_rebuild_render_cache(inventory, signature)) {
+            inventory_render_uncached(scr, inventory);
+            renderedUncached = 1;
+        }
+    }
+
+    if (!renderedUncached && inventory->renderCache) {
+        masked_blit(
+            inventory->renderCache,
+            scr,
+            0,
+            0,
+            inventory->renderCacheLeft,
+            inventory->renderCacheTop,
+            inventory->renderCacheWidth,
+            inventory->renderCacheHeight);
+    }
 
     if (inventory->hoveredInfo) {
         textout_ex(

@@ -43,6 +43,12 @@ typedef struct {
     Slot* slots[INVENTORY_COLS * INVENTORY_ROWS];
     Slot* crafting[INVENTORY_COLS * CRAFTING_ROWS];
     int shown;
+    BITMAP* renderCache;
+    unsigned long renderSignature;
+    int renderCacheLeft;
+    int renderCacheTop;
+    int renderCacheWidth;
+    int renderCacheHeight;
 
     ItemInfo* hoveredInfo;
 } Inventory;

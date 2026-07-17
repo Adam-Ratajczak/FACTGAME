@@ -312,11 +312,11 @@ void item_destroy(Item* item){
     destroy_entity(item->sprite);
     free(item);
 }
+
 void item_render(BITMAP* scr, Item* item, const Box* vp)
 {
     if (!scr || !item)
         return;
-
 
     if (!item->inInventory){
         int x = item->sprite->x - vp->Left;
