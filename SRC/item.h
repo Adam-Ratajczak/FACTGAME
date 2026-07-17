@@ -1,6 +1,7 @@
 #ifndef ITEM_H
 #define ITEM_H
 #include "entity.h"
+#include "tiles.h"
 
 #define ITEM_STONE          0x0000
 #define ITEM_COAL           0x0001
@@ -21,7 +22,8 @@
 #define ITEM_COPPER_WIRE    0x0010
 #define ITEM_CIRCUIT        0x0011
 #define ITEM_STONE_BRICK    0x0012
-#define ITEM_COUNT          0x0013
+#define ITEM_SPLITTER       0x0013
+#define ITEM_COUNT          0x0014
 
 #define ITEM_FUNCTION_WEAPON 0x0
 #define ITEM_FUNCTION_TOOL 0x1
@@ -46,6 +48,9 @@ typedef struct{
     char name[64];
     int maxDurability;
     int function;
+    int aquiredFrom;
+    int placedAs;
+    int smelting;
     ItemRecipe* recipe;
 } ItemInfo;
 

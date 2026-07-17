@@ -90,6 +90,7 @@ HUD* hud_create(ItemRegistry* itemReg, TextureManager* texmgr){
         hud->slots[index] = slot_create(texmgr, HUD_SLOT_PURPOSE_BUILD, x, y, NULL);
         x += SLOT_SIZE;
     }
+    slot_set_item(hud->slots[2], item_create(itemReg, texmgr, ITEM_FURNACE, 1));
     hud->selected = -1;
 
     hud_select_slot(hud, ATTACK_SLOT);
@@ -133,6 +134,7 @@ Inventory* inventory_create(ItemRegistry* itemReg, TextureManager* texmgr){
     Inventory* inventory = (Inventory*)malloc(sizeof(Inventory));
     inventory->hud = hud_create(itemReg, texmgr);
     inventory->shown = 0;
+    inventory->hoveredInfo = NULL;
 
     int invHeight = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE;
     int y = (SCREEN_H - invHeight) / 2;
@@ -225,6 +227,17 @@ void inventory_render(BITMAP* scr, Inventory* inventory){
     }
 
     hud_render(scr, inventory->hud);
+
+    if (inventory->hoveredInfo) {
+        textout_ex(
+            scr,
+            font,
+            inventory->hoveredInfo->name,
+            4,
+            4,
+            makecol(255, 255, 255),
+            makecol(0, 0, 0));
+    }
 }
 
 Slot* inventory_get_selected_slot(Inventory* inventory){
@@ -294,4 +307,49 @@ int inventory_pick_item(Inventory* inventory, Item* item)
     }
 
     return 0;
+}
+
+Slot* inventory_get_slot_from_coords(Inventory* inventory, int x, int y){
+    if(!inventory){
+        return NULL;
+    }
+
+    for(int i = 0; i < INVENTORY_COLS * INVENTORY_ROWS; i++){
+        Slot* slot = inventory->slots[i];
+        Entity* sprite = slot->sprite;
+        if(sprite->x <= x && x <= sprite->x + sprite->w && sprite->y <= y && y <= sprite->y + sprite->h){
+            return slot;
+        }
+    }
+
+    for(int i = 0; i < INVENTORY_COLS * CRAFTING_ROWS; i++){
+        Slot* slot = inventory->crafting[i];
+        Entity* sprite = slot->sprite;
+        if(sprite->x <= x && x <= sprite->x + sprite->w && sprite->y <= y && y <= sprite->y + sprite->h){
+            return slot;
+        }
+    }
+
+    for(int i = 0; i < INVENTORY_COLS; i++){
+        Slot* slot = inventory->hud->slots[i];
+        Entity* sprite = slot->sprite;
+        if(sprite->x <= x && x <= sprite->x + sprite->w && sprite->y <= y && y <= sprite->y + sprite->h){
+            return slot;
+        }
+    }
+
+    return NULL;
+}
+
+void inventory_hover(ItemRegistry* itemReg, Inventory* inventory, int x, int y){
+    if(!itemReg || !inventory){
+        return;
+    }
+    Slot* slot = inventory_get_slot_from_coords(inventory, x, y);
+    if(!slot || !slot->item){
+        inventory->hoveredInfo = NULL;
+        return;
+    }
+
+    inventory->hoveredInfo = &itemReg->info[slot->item->itemId];
 }

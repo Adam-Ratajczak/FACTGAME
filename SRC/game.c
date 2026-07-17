@@ -56,13 +56,11 @@ void run_game(){
     position_mouse(SCREEN_W / 2, SCREEN_H / 2);
     int prev_mouse_b = 0;
 
-    while (!key[KEY_ESC]) {
+    while (!key[KEY_X]) {
         poll_mouse();
 
         if (event_timer >= event_delay) {
-            int mouse_world_x = mouse_x + player->vp.Left;
-            int mouse_world_y = mouse_y + player->vp.Top;
-            player_look_at(player, mouse_world_x, mouse_world_y);
+            player_mouse_move_action(itemReg, player, mouse_x, mouse_y);
             int dx_input = 0;
             int dy_input = 0;
 
@@ -70,6 +68,8 @@ void run_game(){
             if (key[KEY_S]) dy_input -= 1;
             if (key[KEY_D]) dx_input += 1;
             if (key[KEY_A]) dx_input -= 1;
+            if (key[KEY_R])
+                player_pick_items(map, player);
 
             if (KEY_PRESSED(KEY_1)) player_select_hud_slot(player, 0);
             if (KEY_PRESSED(KEY_2)) player_select_hud_slot(player, 1);
@@ -81,8 +81,9 @@ void run_game(){
             if (KEY_PRESSED(KEY_E))
                 player_toggle_inventory(itemReg, player);
 
-            if (KEY_PRESSED(KEY_R))
-                player_pick_items(map, player);
+            if (KEY_PRESSED(KEY_ESC))
+                player_cancel(player);
+
 
             if (dx_input != 0 || dy_input != 0) {
                 player_move(player, dx_input, dy_input);

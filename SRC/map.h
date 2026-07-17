@@ -1,6 +1,6 @@
 #ifndef MAP_H
 #define MAP_H
-#include "entity.h"
+#include "tiles.h"
 #include "item.h"
 
 #define CHUNK_SIZE 16
@@ -9,11 +9,8 @@
 #define ZINDEX_GROUND 0
 #define ZINDEX_ORES 1
 #define ZINDEX_DECORATION 2
+#define ZINDEX_OVERLAY 3
 
-typedef struct {
-    int TexID;
-    Entity* Entity;
-} Tile;
 
 typedef struct {
     int X;
@@ -48,7 +45,6 @@ void destroy_map(Map* map);
 void map_drop_item(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, int wx, int wy, int itemId, int amount);
 DroppedItems* map_release_dropped_items(Map* map, int wx, int wy);
 
-Tile* create_tile(TextureManager* texmgr, int tex_id);
 Chunk* get_chunk(Map* map, int chunkX, int chunkY);
 Chunk* create_chunk(TextureManager* texmgr, Map* map, int chunkX, int chunkY);
 int is_chunk_in_vp(Chunk* chunk, Box* vp);

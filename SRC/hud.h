@@ -43,6 +43,8 @@ typedef struct {
     Slot* slots[INVENTORY_COLS * INVENTORY_ROWS];
     Slot* crafting[INVENTORY_COLS * CRAFTING_ROWS];
     int shown;
+
+    ItemInfo* hoveredInfo;
 } Inventory;
 
 Inventory* inventory_create(ItemRegistry* itemReg, TextureManager* texmgr);
@@ -55,5 +57,7 @@ void inventory_render(BITMAP* scr, Inventory* inventory);
 Slot* inventory_get_selected_slot(Inventory* inventory);
 
 int inventory_pick_item(Inventory* inventory, Item* item);
+Slot* inventory_get_slot_from_coords(Inventory* inventory, int x, int y);
+void inventory_hover(ItemRegistry* itemReg, Inventory* inventory, int x, int y);
 
 #endif

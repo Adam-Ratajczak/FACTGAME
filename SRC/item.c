@@ -46,49 +46,74 @@ ItemRegistry* item_registry_create(void)
     strcpy(reg->info[ITEM_STONE].name, "Stone");
     reg->info[ITEM_STONE].maxDurability = 0;
     reg->info[ITEM_STONE].function = ITEM_FUNCTION_MATERIAL;
+    reg->info[ITEM_STONE].aquiredFrom = BLOCK_STONE;
+    reg->info[ITEM_STONE].placedAs = -1;
+    reg->info[ITEM_STONE].smelting = 0;
+    reg->info[ITEM_STONE].recipe = NULL;
 
     strcpy(reg->info[ITEM_COAL].name, "Coal");
     reg->info[ITEM_COAL].maxDurability = 0;
     reg->info[ITEM_COAL].function = ITEM_FUNCTION_MATERIAL;
+    reg->info[ITEM_COAL].aquiredFrom = BLOCK_ORE_COAL;
+    reg->info[ITEM_COAL].placedAs = -1;
+    reg->info[ITEM_COAL].smelting = 0;
+    reg->info[ITEM_COAL].recipe = NULL;
 
     strcpy(reg->info[ITEM_RAW_IRON].name, "Iron Ore");
     reg->info[ITEM_RAW_IRON].maxDurability = 0;
     reg->info[ITEM_RAW_IRON].function = ITEM_FUNCTION_MATERIAL;
+    reg->info[ITEM_RAW_IRON].aquiredFrom = BLOCK_ORE_IRON;
+    reg->info[ITEM_RAW_IRON].placedAs = -1;
+    reg->info[ITEM_RAW_IRON].smelting = 0;
+    reg->info[ITEM_RAW_IRON].recipe = NULL;
 
     strcpy(reg->info[ITEM_RAW_COPPER].name, "Copper Ore");
     reg->info[ITEM_RAW_COPPER].maxDurability = 0;
-    reg->info[ITEM_STONE].function = ITEM_FUNCTION_MATERIAL;
+    reg->info[ITEM_RAW_COPPER].function = ITEM_FUNCTION_MATERIAL;
+    reg->info[ITEM_RAW_COPPER].aquiredFrom = BLOCK_ORE_COPPER;
+    reg->info[ITEM_RAW_COPPER].placedAs = -1;
+    reg->info[ITEM_RAW_COPPER].smelting = 0;
+    reg->info[ITEM_RAW_COPPER].recipe = NULL;
 
     strcpy(reg->info[ITEM_IRON].name, "Iron Plate");
     reg->info[ITEM_IRON].maxDurability = 0;
     reg->info[ITEM_IRON].function = ITEM_FUNCTION_MATERIAL;
+    reg->info[ITEM_IRON].aquiredFrom = -1;
+    reg->info[ITEM_IRON].placedAs = -1;
+    reg->info[ITEM_IRON].smelting = 1;
     reg->info[ITEM_IRON].recipe =
         item_recipe_create(
             ITEM_RAW_IRON, 1,
-            ITEM_COAL, 1,
             -1);
 
     strcpy(reg->info[ITEM_COPPER].name, "Copper Plate");
     reg->info[ITEM_COPPER].maxDurability = 0;
     reg->info[ITEM_COPPER].function = ITEM_FUNCTION_MATERIAL;
+    reg->info[ITEM_COPPER].aquiredFrom = -1;
+    reg->info[ITEM_COPPER].placedAs = -1;
+    reg->info[ITEM_COPPER].smelting = 1;
     reg->info[ITEM_COPPER].recipe =
         item_recipe_create(
             ITEM_RAW_COPPER, 1,
-            ITEM_COAL, 1,
             -1);
 
     strcpy(reg->info[ITEM_STONE_BRICK].name, "Stone Brick");
     reg->info[ITEM_STONE_BRICK].maxDurability = 0;
     reg->info[ITEM_STONE_BRICK].function = ITEM_FUNCTION_MATERIAL;
+    reg->info[ITEM_STONE_BRICK].aquiredFrom = -1;
+    reg->info[ITEM_STONE_BRICK].placedAs = -1;
+    reg->info[ITEM_STONE_BRICK].smelting = 1;
     reg->info[ITEM_STONE_BRICK].recipe =
         item_recipe_create(
             ITEM_STONE, 2,
-            ITEM_COAL, 1,
             -1);
 
     strcpy(reg->info[ITEM_GEAR].name, "Iron Gear");
     reg->info[ITEM_GEAR].maxDurability = 0;
     reg->info[ITEM_GEAR].function = ITEM_FUNCTION_MATERIAL;
+    reg->info[ITEM_GEAR].aquiredFrom = -1;
+    reg->info[ITEM_GEAR].placedAs = -1;
+    reg->info[ITEM_GEAR].smelting = 0;
     reg->info[ITEM_GEAR].recipe =
         item_recipe_create(
             ITEM_IRON, 2,
@@ -97,6 +122,9 @@ ItemRegistry* item_registry_create(void)
     strcpy(reg->info[ITEM_COPPER_WIRE].name, "Copper Wire");
     reg->info[ITEM_COPPER_WIRE].maxDurability = 0;
     reg->info[ITEM_COPPER_WIRE].function = ITEM_FUNCTION_MATERIAL;
+    reg->info[ITEM_COPPER_WIRE].aquiredFrom = -1;
+    reg->info[ITEM_COPPER_WIRE].placedAs = -1;
+    reg->info[ITEM_COPPER_WIRE].smelting = 0;
     reg->info[ITEM_COPPER_WIRE].recipe =
         item_recipe_create(
             ITEM_COPPER, 1,
@@ -105,6 +133,9 @@ ItemRegistry* item_registry_create(void)
     strcpy(reg->info[ITEM_CIRCUIT].name, "Circuit");
     reg->info[ITEM_CIRCUIT].maxDurability = 0;
     reg->info[ITEM_CIRCUIT].function = ITEM_FUNCTION_MATERIAL;
+    reg->info[ITEM_CIRCUIT].aquiredFrom = -1;
+    reg->info[ITEM_CIRCUIT].placedAs = -1;
+    reg->info[ITEM_CIRCUIT].smelting = 0;
     reg->info[ITEM_CIRCUIT].recipe =
         item_recipe_create(
             ITEM_COPPER_WIRE, 3,
@@ -114,6 +145,9 @@ ItemRegistry* item_registry_create(void)
     strcpy(reg->info[ITEM_CONVEYOR_BELT].name, "Conveyor Belt");
     reg->info[ITEM_CONVEYOR_BELT].maxDurability = 0;
     reg->info[ITEM_CONVEYOR_BELT].function = ITEM_FUNCTION_BLOCK;
+    reg->info[ITEM_CONVEYOR_BELT].aquiredFrom = OVERLAY_CONVAYER_BELT;
+    reg->info[ITEM_CONVEYOR_BELT].placedAs = OVERLAY_CONVAYER_BELT;
+    reg->info[ITEM_CONVEYOR_BELT].smelting = 0;
     reg->info[ITEM_CONVEYOR_BELT].recipe =
         item_recipe_create(
             ITEM_GEAR, 1,
@@ -123,6 +157,9 @@ ItemRegistry* item_registry_create(void)
     strcpy(reg->info[ITEM_CHEST].name, "Chest");
     reg->info[ITEM_CHEST].maxDurability = 0;
     reg->info[ITEM_CHEST].function = ITEM_FUNCTION_BLOCK;
+    reg->info[ITEM_CHEST].aquiredFrom = OVERLAY_CHEST;
+    reg->info[ITEM_CHEST].placedAs = OVERLAY_CHEST;
+    reg->info[ITEM_CHEST].smelting = 0;
     reg->info[ITEM_CHEST].recipe =
         item_recipe_create(
             ITEM_STONE_BRICK, 8,
@@ -131,6 +168,9 @@ ItemRegistry* item_registry_create(void)
     strcpy(reg->info[ITEM_FURNACE].name, "Furnace");
     reg->info[ITEM_FURNACE].maxDurability = 0;
     reg->info[ITEM_FURNACE].function = ITEM_FUNCTION_BLOCK;
+    reg->info[ITEM_FURNACE].aquiredFrom = OVERLAY_FURNACE;
+    reg->info[ITEM_FURNACE].placedAs = OVERLAY_FURNACE;
+    reg->info[ITEM_FURNACE].smelting = 0;
     reg->info[ITEM_FURNACE].recipe =
         item_recipe_create(
             ITEM_STONE_BRICK, 12,
@@ -140,6 +180,9 @@ ItemRegistry* item_registry_create(void)
     strcpy(reg->info[ITEM_MINE].name, "Mining Drill");
     reg->info[ITEM_MINE].maxDurability = 0;
     reg->info[ITEM_MINE].function = ITEM_FUNCTION_BLOCK;
+    reg->info[ITEM_MINE].aquiredFrom = OVERLAY_MINE;
+    reg->info[ITEM_MINE].placedAs = OVERLAY_MINE;
+    reg->info[ITEM_MINE].smelting = 0;
     reg->info[ITEM_MINE].recipe =
         item_recipe_create(
             ITEM_GEAR, 8,
@@ -150,6 +193,9 @@ ItemRegistry* item_registry_create(void)
     strcpy(reg->info[ITEM_CRAFTER_HEAD].name, "Crafter Head");
     reg->info[ITEM_CRAFTER_HEAD].maxDurability = 0;
     reg->info[ITEM_CRAFTER_HEAD].function = ITEM_FUNCTION_BLOCK;
+    reg->info[ITEM_CRAFTER_HEAD].aquiredFrom = OVERLAY_CRAFTER_HEAD;
+    reg->info[ITEM_CRAFTER_HEAD].placedAs = OVERLAY_CRAFTER_HEAD;
+    reg->info[ITEM_CRAFTER_HEAD].smelting = 0;
     reg->info[ITEM_CRAFTER_HEAD].recipe =
         item_recipe_create(
             ITEM_GEAR, 6,
@@ -160,6 +206,9 @@ ItemRegistry* item_registry_create(void)
     strcpy(reg->info[ITEM_CRAFTER_MODULE].name, "Crafter Module");
     reg->info[ITEM_CRAFTER_MODULE].maxDurability = 0;
     reg->info[ITEM_CRAFTER_MODULE].function = ITEM_FUNCTION_BLOCK;
+    reg->info[ITEM_CRAFTER_MODULE].aquiredFrom = OVERLAY_CRAFTER_MODULE;
+    reg->info[ITEM_CRAFTER_MODULE].placedAs = OVERLAY_CRAFTER_MODULE;
+    reg->info[ITEM_CRAFTER_MODULE].smelting = 0;
     reg->info[ITEM_CRAFTER_MODULE].recipe =
         item_recipe_create(
             ITEM_GEAR, 2,
@@ -170,6 +219,9 @@ ItemRegistry* item_registry_create(void)
     strcpy(reg->info[ITEM_ATTACK_ORB].name, "Attack Orb");
     reg->info[ITEM_ATTACK_ORB].maxDurability = 256;
     reg->info[ITEM_ATTACK_ORB].function = ITEM_FUNCTION_WEAPON;
+    reg->info[ITEM_ATTACK_ORB].aquiredFrom = -1;
+    reg->info[ITEM_ATTACK_ORB].placedAs = -1;
+    reg->info[ITEM_ATTACK_ORB].smelting = 0;
     reg->info[ITEM_ATTACK_ORB].recipe =
         item_recipe_create(
             ITEM_CIRCUIT, 6,
@@ -180,11 +232,27 @@ ItemRegistry* item_registry_create(void)
     strcpy(reg->info[ITEM_MINING_ORB].name, "Mining Orb");
     reg->info[ITEM_MINING_ORB].maxDurability = 256;
     reg->info[ITEM_MINING_ORB].function = ITEM_FUNCTION_TOOL;
+    reg->info[ITEM_MINING_ORB].aquiredFrom = -1;
+    reg->info[ITEM_MINING_ORB].placedAs = -1;
+    reg->info[ITEM_MINING_ORB].smelting = 0;
     reg->info[ITEM_MINING_ORB].recipe =
         item_recipe_create(
             ITEM_CIRCUIT, 4,
             ITEM_GEAR, 4,
             ITEM_IRON, 6,
+            -1);
+
+    strcpy(reg->info[ITEM_SPLITTER].name, "Splitter");
+    reg->info[ITEM_SPLITTER].maxDurability = 0;
+    reg->info[ITEM_SPLITTER].function = ITEM_FUNCTION_BLOCK;
+    reg->info[ITEM_SPLITTER].aquiredFrom = OVERLAY_SPLITTER;
+    reg->info[ITEM_SPLITTER].placedAs = OVERLAY_SPLITTER;
+    reg->info[ITEM_SPLITTER].smelting = 0;
+    reg->info[ITEM_SPLITTER].recipe =
+        item_recipe_create(
+            ITEM_CONVEYOR_BELT, 2,
+            ITEM_GEAR, 2,
+            ITEM_IRON, 2,
             -1);
 
     return reg;

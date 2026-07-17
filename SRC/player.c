@@ -62,17 +62,6 @@ void player_update(TextureManager* texmgr, Player* player){
     player->vp.Top = player->y - SCREEN_H / 2.0;
 }
 
-void player_look_at(Player* player, int wx, int wy){
-    if(!player){
-        return;
-    }
-
-    player->rot = atan2(wy - player->y, wx - player->x);
-    if(isnan(player->rot)){
-        player->rot = M_PI / 2;
-    }
-}
-
 void player_move(Player* player, int dx, int dy) {
     if (!player) {
         return;
@@ -163,6 +152,16 @@ void player_toggle_inventory(ItemRegistry* itemReg, Player* player){
     }
 }
 
+void player_cancel(Player* player){
+    if(!player){
+        return;
+    }
+
+    if(player->inventory->shown == 1){
+        inventory_hide(player->inventory);
+    }
+}
+
 void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int x, int y, int button){
     if(!map || !player){
         return;
@@ -179,26 +178,43 @@ void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map
                     int tx = wx / TILE_SIZE;
                     int ty = wy / TILE_SIZE;
 
-                    Tile* tile_ground = get_tile(map, tx, ty, ZINDEX_GROUND);
-                    Tile* tile_ore = get_tile(map, tx, ty, ZINDEX_ORES);
-                    if(tile_ore){
-                        log_debug("Ore");
-                        if(tile_ore->TexID == BLOCK_ORE_COAL){
-                            map_drop_item(itemReg, texmgr, map, tx, ty, ITEM_COAL, 1);
-                        }else if(tile_ore->TexID == BLOCK_ORE_IRON){
-                            map_drop_item(itemReg, texmgr, map, tx, ty, ITEM_RAW_IRON, 1);
-                        }else if(tile_ore->TexID == BLOCK_ORE_COPPER){
-                            map_drop_item(itemReg, texmgr, map, tx, ty, ITEM_RAW_COPPER, 1);
+                    for(int z = 3; z >= 0; --z){
+                        Tile* tile = get_tile(map, tx, ty, z);
+                        if(!tile){
+                            continue;
                         }
-                    }else if(tile_ground){
-                        log_debug("Ground");
-                        if(tile_ground->TexID == BLOCK_STONE){
-                            map_drop_item(itemReg, texmgr, map, tx, ty, ITEM_STONE, 1);
+
+                        for(int i = 0; i < ITEM_COUNT; i++){
+                            if((tile->TexID & 0xFFF0) == itemReg->info[i].aquiredFrom){
+                                map_drop_item(itemReg, texmgr, map, tx, ty, i, 1);
+                                if((tile->TexID & 0xF000) == TILE_OVERLAY){
+                                    set_tile(map, NULL, tx, ty, z);
+                                }
+                                return;
+                            }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+void player_mouse_move_action(ItemRegistry* itemReg, Player* player, int x, int y){
+    if(!player){
+        return;
+    }
+    int wx = x + player->vp.Left;
+    int wy = y + player->vp.Top;
+
+    player->rot = atan2(wy - player->y, wx - player->x);
+    if(isnan(player->rot)){
+        player->rot = M_PI / 2;
+        return;
+    }
+
+    if(player->inventory->shown){
+        inventory_hover(itemReg, player->inventory, x, y);
     }
 }
 
@@ -209,17 +225,21 @@ void player_pick_items(Map* map, Player* player){
 
     int tx = player->x / TILE_SIZE;
     int ty = player->y / TILE_SIZE;
-    DroppedItems* items = map_release_dropped_items(map, tx, ty);
-    if(!items){
-        return;
-    }
+    for(int x = tx - 1; x <= tx + 1; x++){
+        for(int y = ty - 1; y <= ty + 1; y++){
+            DroppedItems* items = map_release_dropped_items(map, x, y);
+            if(!items){
+                continue;
+            }
 
-    for(int i = 0; i < items->itemCount; i++){
-        if(!inventory_pick_item(player->inventory, items->items[i])){
-            item_destroy(items->items[i]);
+            for(int i = 0; i < items->itemCount; i++){
+                if(!inventory_pick_item(player->inventory, items->items[i])){
+                    item_destroy(items->items[i]);
+                }
+            }
+
+            free(items->items);
+            free(items);
         }
     }
-
-    free(items->items);
-    free(items);
 }

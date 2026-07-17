@@ -113,28 +113,6 @@ void destroy_map(Map* map){
     free(map);
 }
 
-Tile* create_tile(TextureManager* texmgr, int tex_id){
-    Tile* tile = (Tile*)malloc(sizeof(Tile));
-    tile->TexID = tex_id;
-
-    int left = 0, top = 0;
-    get_tile_def(tex_id, &left, &top);
-    tile->Entity = create_entity(0, 0, TILE_SIZE, TILE_SIZE);
-
-    switch(tex_id & 0xF000){
-        case TILE_BLOCK:
-            add_sprite_to_entity(texmgr, tile->Entity, "ASSETS/TEXTURES/ground.pcx", left, top);
-            break;
-        case TILE_OVERLAY:
-            add_sprite_to_entity(texmgr, tile->Entity, "ASSETS/TEXTURES/overlays.pcx", left, top);
-            break;
-        default:
-            break;
-    }
-
-    return tile;
-}
-
 static int ensure_chunk_tiles(TextureManager* texmgr, Chunk* chunk) {
     if (chunk->Tiles[0])
         return 1;

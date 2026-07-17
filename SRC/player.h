@@ -31,16 +31,19 @@ typedef struct
 Player* player_create(ItemRegistry* itemReg, TextureManager* texmgr);
 void player_destroy(Player* player);
 void player_update(TextureManager* texmgr, Player* player);
-void player_look_at(Player* player, int wx, int wy);
 void player_move(Player* player, int dx, int dy);
 void player_render(BITMAP* scr, Player* player);
 
 void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int x, int y, int button);
+void player_mouse_move_action(ItemRegistry* itemReg, Player* player, int x, int y);
 
 void player_get_texcoords(int state, int walkingState, int* left, int* top);
 
 void player_select_hud_slot(Player* player, int slotIndex);
 void player_toggle_inventory(ItemRegistry* itemReg, Player* player);
+void player_cancel(Player* player);
 void player_pick_items(Map* map, Player* player);
+
+
 
 #endif
