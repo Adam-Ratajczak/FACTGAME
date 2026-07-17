@@ -21,6 +21,7 @@ Entity* create_entity(int ex, int ey, int ew, int eh);
 void add_sprite_to_entity(TextureManager* manager, Entity* entity, const char* path, int sx, int sy);
 void entity_rotate_right(Entity* entity);
 void destroy_entity(Entity* entity);
+void entity_renderer_shutdown(void);
 
 void render_entity(BITMAP* scr, Entity* entity, const Box* vp);
 

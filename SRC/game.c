@@ -37,14 +37,25 @@ void run_game(){
 
     TextureManager* texmgr = create_texture_manager();
     ItemRegistry* itemReg = item_registry_create();
+    Player* player = NULL;
+    Map* map = NULL;
 
-    Player* player = player_create(itemReg, texmgr);
-    if (!player) {
-        log_debug("Failed to create player!\n");
-        return;
+    if (!texmgr || !itemReg) {
+        log_debug("Failed to initialize game resources!\n");
+        goto cleanup;
     }
 
-    Map* map = create_map();
+    player = player_create(itemReg, texmgr);
+    if (!player) {
+        log_debug("Failed to create player!\n");
+        goto cleanup;
+    }
+
+    map = create_map();
+    if (!map) {
+        log_debug("Failed to create map!\n");
+        goto cleanup;
+    }
     ensure_visible_chunks(texmgr, map, &player->vp);
 
     int event_delay = 1;
@@ -121,9 +132,13 @@ void run_game(){
         }
     }
 
+cleanup:
     player_destroy(player);
     destroy_map(map);
+    item_registry_destroy(itemReg);
     destroy_texture_manager(texmgr);
+    entity_renderer_shutdown();
     destroy_bitmap(back_buffer);
+    back_buffer = NULL;
     show_mouse(NULL);
 }

@@ -44,6 +44,8 @@ typedef struct {
 } Tile;
 
 Tile* create_tile(TextureManager* texmgr, int tex_id);
+Tile* create_tile_rotated(TextureManager* texmgr, int tex_id, int angle);
+void destroy_tile(Tile* tile);
 
 int get_tile_def(int id, int* left, int* top);
 

@@ -42,6 +42,8 @@ ItemRecipe* item_recipe_create(int firstItemId, ...)
 ItemRegistry* item_registry_create(void)
 {
     ItemRegistry* reg = calloc(1, sizeof(*reg));
+    if (!reg)
+        return NULL;
 
     strcpy(reg->info[ITEM_STONE].name, "Stone");
     reg->info[ITEM_STONE].maxDurability = 0;
@@ -258,8 +260,29 @@ ItemRegistry* item_registry_create(void)
     return reg;
 }
 
+void item_registry_destroy(ItemRegistry* registry)
+{
+    if (!registry)
+        return;
+
+    for (int i = 0; i < ITEM_COUNT; ++i)
+    {
+        ItemRecipe* recipe = registry->info[i].recipe;
+        if (!recipe)
+            continue;
+
+        free(recipe->requires);
+        free(recipe);
+    }
+
+    free(registry);
+}
+
 Item* item_create(ItemRegistry* itemReg, TextureManager* texmgr, int itemId, int amount){
     Item* item = (Item*)malloc(sizeof(Item));
+    if (!item)
+        return NULL;
+
     int texLeft, texTop;
     if(!item_get_texcoords(itemId, &texLeft, &texTop)){
         free(item);
@@ -268,6 +291,11 @@ Item* item_create(ItemRegistry* itemReg, TextureManager* texmgr, int itemId, int
 
     item->itemId = itemId;
     item->sprite = create_entity(0, 0, 8, 8);
+    if (!item->sprite) {
+        free(item);
+        return NULL;
+    }
+
     add_sprite_to_entity(texmgr, item->sprite, "ASSETS/TEXTURES/items.pcx", texLeft, texTop);
     item->amount = amount;
     item->maxDurability = itemReg->info[itemId].maxDurability;

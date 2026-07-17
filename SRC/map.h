@@ -30,6 +30,8 @@ typedef struct{
 typedef struct {
     Chunk** Chunks;
     int chunkCount;
+    Chunk** chunkBuckets;
+    int chunkBucketCount;
 
     DroppedItems** droppedIems;
     int droppedItemCount;

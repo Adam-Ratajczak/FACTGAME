@@ -2,7 +2,8 @@ SHELL := cmd
 .ONESHELL:
 
 CC = gcc
-CFLAGS = -g -O0 -fno-omit-frame-pointer -Wall -Wextra -fmax-errors=1
+CFLAGS = -O2 -Wall -Wextra -fmax-errors=1
+DEBUG_CFLAGS = -g -O0 -fno-omit-frame-pointer -Wall -Wextra -fmax-errors=1
 CPPFLAGS = -Isrc
 LDFLAGS = -lalleg -lz -Wl,--allow-multiple-definition
 
@@ -14,6 +15,9 @@ SRC := $(wildcard src/*.c)
 OBJ := $(patsubst src/%.c,$(INTDIR)/%.o,$(SRC))
 
 all: $(TARGET)
+
+debug: CFLAGS = $(DEBUG_CFLAGS)
+debug: $(TARGET)
 
 $(TARGET): $(OBJ)
 	if not exist "$(OUTDIR)" mkdir "$(OUTDIR)"

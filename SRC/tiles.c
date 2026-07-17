@@ -1,25 +1,57 @@
 #include "tiles.h"
 
-Tile* create_tile(TextureManager* texmgr, int tex_id){
+static const char* texture_path_for_tile(int tex_id)
+{
+    switch(tex_id & 0xF000){
+        case TILE_BLOCK:
+            return "ASSETS/TEXTURES/ground.pcx";
+        case TILE_OVERLAY:
+            return "ASSETS/TEXTURES/overlays.pcx";
+        default:
+            return NULL;
+    }
+}
+
+Tile* create_tile_rotated(TextureManager* texmgr, int tex_id, int angle){
     Tile* tile = (Tile*)malloc(sizeof(Tile));
+    if (!tile)
+        return NULL;
+
     tile->TexID = tex_id;
 
     int left = 0, top = 0;
     get_tile_def(tex_id, &left, &top);
     tile->Entity = create_entity(0, 0, TILE_SIZE, TILE_SIZE);
+    if (!tile->Entity) {
+        free(tile);
+        return NULL;
+    }
 
-    switch(tex_id & 0xF000){
-        case TILE_BLOCK:
-            add_sprite_to_entity(texmgr, tile->Entity, "ASSETS/TEXTURES/ground.pcx", left, top);
-            break;
-        case TILE_OVERLAY:
-            add_sprite_to_entity(texmgr, tile->Entity, "ASSETS/TEXTURES/overlays.pcx", left, top);
-            break;
-        default:
-            break;
+    const char* path = texture_path_for_tile(tex_id);
+    if (path) {
+        if (angle == 0) {
+            add_sprite_to_entity(texmgr, tile->Entity, path, left, top);
+        } else {
+            tile->Entity->sheet = load_texture_region(texmgr, path, left, top, TILE_SIZE, TILE_SIZE, angle);
+            tile->Entity->sx = 0;
+            tile->Entity->sy = 0;
+            tile->Entity->angle = 0;
+        }
     }
 
     return tile;
+}
+
+Tile* create_tile(TextureManager* texmgr, int tex_id){
+    return create_tile_rotated(texmgr, tex_id, 0);
+}
+
+void destroy_tile(Tile* tile) {
+    if (!tile)
+        return;
+
+    destroy_entity(tile->Entity);
+    free(tile);
 }
 
 static int get_block_def(int id, int* left, int* top){

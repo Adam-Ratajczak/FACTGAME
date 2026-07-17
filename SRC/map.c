@@ -6,14 +6,74 @@
 #include "perlin.h"
 #include "alwrap.h"
 
+static unsigned int chunk_hash(int chunkX, int chunkY)
+{
+    return (unsigned int)(chunkX * 73856093u) ^ (unsigned int)(chunkY * 19349663u);
+}
+
+static void map_disable_chunk_buckets(Map* map)
+{
+    free(map->chunkBuckets);
+    map->chunkBuckets = NULL;
+    map->chunkBucketCount = 0;
+}
+
+static int map_rebuild_chunk_buckets(Map* map, int bucketCount)
+{
+    Chunk** buckets = calloc(bucketCount, sizeof(Chunk*));
+    if (!buckets)
+        return 0;
+
+    for (int i = 0; i < map->chunkCount; ++i) {
+        Chunk* chunk = map->Chunks[i];
+        unsigned int index = chunk_hash(chunk->X, chunk->Y) & (bucketCount - 1);
+
+        while (buckets[index])
+            index = (index + 1) & (bucketCount - 1);
+
+        buckets[index] = chunk;
+    }
+
+    free(map->chunkBuckets);
+    map->chunkBuckets = buckets;
+    map->chunkBucketCount = bucketCount;
+    return 1;
+}
+
+static int map_ensure_chunk_buckets(Map* map)
+{
+    int wanted = 64;
+    while (wanted < (map->chunkCount + 1) * 2)
+        wanted *= 2;
+
+    if (map->chunkBucketCount >= wanted)
+        return 1;
+
+    return map_rebuild_chunk_buckets(map, wanted);
+}
+
+static int map_insert_chunk_bucket(Map* map, Chunk* chunk)
+{
+    if (!map_ensure_chunk_buckets(map))
+        return 0;
+
+    unsigned int index = chunk_hash(chunk->X, chunk->Y) & (map->chunkBucketCount - 1);
+
+    while (map->chunkBuckets[index])
+        index = (index + 1) & (map->chunkBucketCount - 1);
+
+    map->chunkBuckets[index] = chunk;
+    return 1;
+}
+
 Tile* get_tile(Map* map, int X, int Y, int zIndex) {
-    if(!map) return NULL;
+    if(!map || zIndex < 0 || zIndex >= MAX_ZINDEX) return NULL;
 
     int chunkX = div_floor(X, CHUNK_SIZE);
     int chunkY = div_floor(Y, CHUNK_SIZE);
 
     Chunk* chunk = get_chunk(map, chunkX, chunkY);
-    if(!chunk || !chunk->Tiles) return NULL;
+    if(!chunk || !chunk->Tiles[zIndex]) return NULL;
 
     int tileX = mod_floor(X, CHUNK_SIZE);
     int tileY = mod_floor(Y, CHUNK_SIZE);
@@ -22,7 +82,8 @@ Tile* get_tile(Map* map, int X, int Y, int zIndex) {
 }
 
 void set_tile(Map* map, Tile* tile, int X, int Y, int zIndex){
-    if(!map || !tile || !tile->Entity) return;
+    if(!map || zIndex < 0 || zIndex >= MAX_ZINDEX) return;
+    if(tile && !tile->Entity) return;
 
     int chunkX = div_floor(X, CHUNK_SIZE);
     int chunkY = div_floor(Y, CHUNK_SIZE);
@@ -37,43 +98,62 @@ void set_tile(Map* map, Tile* tile, int X, int Y, int zIndex){
     int tileY = mod_floor(Y, CHUNK_SIZE);
     int idx   = tileY * CHUNK_SIZE + tileX;
 
-    if (chunk->Tiles[zIndex][idx]) {
-        free(chunk->Tiles[zIndex][idx]);
-    }
+    destroy_tile(chunk->Tiles[zIndex][idx]);
 
-    tile->Entity->x = X * TILE_SIZE;
-    tile->Entity->y = Y * TILE_SIZE;
+    if (tile) {
+        tile->Entity->x = X * TILE_SIZE;
+        tile->Entity->y = Y * TILE_SIZE;
+    }
     chunk->Tiles[zIndex][idx] = tile;
 }
 
 Map* create_map(){
     Map* map = (Map*)malloc(sizeof(Map));
+    if (!map)
+        return NULL;
+
     map->chunkCount = 0;
     map->Chunks = NULL;
+    map->chunkBuckets = NULL;
+    map->chunkBucketCount = 0;
     map->droppedItemCount = 0;
     map->droppedIems = NULL;
 
     return map;
 }
 
+static void render_chunk(BITMAP* scr, Chunk* chunk, Box* vp)
+{
+    if (!chunk)
+        return;
+
+    for(int j = 0; j < MAX_ZINDEX; j++){
+        if (!chunk->Tiles[j])
+            continue;
+
+        for(int k = 0; k < CHUNK_SIZE * CHUNK_SIZE; k++){
+            if(!chunk->Tiles[j][k])
+                continue;
+
+            render_entity(scr, chunk->Tiles[j][k]->Entity, vp);
+        }
+    }
+}
+
 void render_map(BITMAP* scr, Map* map, Box* vp){
-    if(!map){
+    if(!map || !vp){
         return;
     }
 
-    for(int i = 0; i < map->chunkCount; i++){
-        Chunk* chunk = map->Chunks[i];
-        if(is_chunk_in_vp(chunk, vp) == 0){
-            continue;
-        }
+    int chunkPixels = CHUNK_SIZE * TILE_SIZE;
+    int firstChunkX = div_floor(vp->Left, chunkPixels);
+    int firstChunkY = div_floor(vp->Top, chunkPixels);
+    int lastChunkX = div_floor(vp->Left + vp->Width - 1, chunkPixels);
+    int lastChunkY = div_floor(vp->Top + vp->Height - 1, chunkPixels);
 
-        for(int j = 0; j < MAX_ZINDEX; j++){
-            for(int k = 0; k < CHUNK_SIZE * CHUNK_SIZE; k++){
-                if(!chunk->Tiles[j][k])
-                    continue;
-
-                render_entity(scr, chunk->Tiles[j][k]->Entity, vp);
-            }
+    for (int cy = firstChunkY; cy <= lastChunkY; ++cy) {
+        for (int cx = firstChunkX; cx <= lastChunkX; ++cx) {
+            render_chunk(scr, get_chunk(map, cx, cy), vp);
         }
     }
 
@@ -90,17 +170,20 @@ void destroy_map(Map* map){
     }
     for(int i = 0; i < map->chunkCount; i++){
         for(int j = 0; j < MAX_ZINDEX; j++){
+            if (!map->Chunks[i]->Tiles[j])
+                continue;
+
             for(int k = 0; k < CHUNK_SIZE * CHUNK_SIZE; k++){
                 if(!map->Chunks[i]->Tiles[j][k])
                     continue;
-                destroy_entity(map->Chunks[i]->Tiles[j][k]->Entity);
-
-                free(map->Chunks[i]->Tiles[j]);
+                destroy_tile(map->Chunks[i]->Tiles[j][k]);
             }
+            free(map->Chunks[i]->Tiles[j]);
         }
         free(map->Chunks[i]);
     }
     free(map->Chunks);
+    free(map->chunkBuckets);
 
     for(int i = 0; i < map->droppedItemCount; i++){
         for(int j = 0; j < map->droppedIems[i]->itemCount; j++){
@@ -119,8 +202,13 @@ static int ensure_chunk_tiles(TextureManager* texmgr, Chunk* chunk) {
 
     for (int z = 0; z < MAX_ZINDEX; z++) {
         chunk->Tiles[z] = calloc(CHUNK_SIZE * CHUNK_SIZE, sizeof(Tile*));
-        if (!chunk->Tiles[z])
+        if (!chunk->Tiles[z]) {
+            for (int i = 0; i < z; ++i) {
+                free(chunk->Tiles[i]);
+                chunk->Tiles[i] = NULL;
+            }
             return 0;
+        }
     }
 
     const float geo_freq = 0.003f;
@@ -164,20 +252,19 @@ static int ensure_chunk_tiles(TextureManager* texmgr, Chunk* chunk) {
                 tile = BLOCK_STONE;
             }
 
-            Tile* ground_tile = create_tile(texmgr, tile);
+            unsigned int hash = (unsigned int)(wx * 73856093 ^ wy * 19349663);
+            int rotations = hash % 4;
+            int angle = 0;
+
+            if (tile == BLOCK_GRASS || tile == BLOCK_STONE || tile == BLOCK_BARELAND || tile == BLOCK_SAND) {
+                angle = rotations * 90;
+            }
+
+            Tile* ground_tile = create_tile_rotated(texmgr, tile, angle);
 
             if (ground_tile && ground_tile->Entity) {
                 ground_tile->Entity->x = wx * TILE_SIZE;
                 ground_tile->Entity->y = wy * TILE_SIZE;
-
-                unsigned int hash = (unsigned int)(wx * 73856093 ^ wy * 19349663);
-                int rotations = hash % 4;
-
-                if (tile == BLOCK_GRASS || tile == BLOCK_STONE || tile == BLOCK_BARELAND || tile == BLOCK_SAND) {
-                    for (int r = 0; r < rotations; r++) {
-                        entity_rotate_right(ground_tile->Entity);
-                    }
-                }
 
                 chunk->Tiles[ZINDEX_GROUND][index] = ground_tile;
             }
@@ -211,9 +298,9 @@ static int ensure_chunk_tiles(TextureManager* texmgr, Chunk* chunk) {
 
                     if (ore_type != -1) {
                         Tile* ore_tile = create_tile(texmgr, ore_type);
-                        ore_tile->Entity->x = wx * TILE_SIZE;
-                        ore_tile->Entity->y = wy * TILE_SIZE;
-                        if(ground_tile && ground_tile->Entity){
+                        if(ore_tile && ore_tile->Entity && ground_tile && ground_tile->Entity){
+                            ore_tile->Entity->x = wx * TILE_SIZE;
+                            ore_tile->Entity->y = wy * TILE_SIZE;
                             chunk->Tiles[ZINDEX_ORES][index] = ore_tile;
                         }
                     }
@@ -229,6 +316,20 @@ static int ensure_chunk_tiles(TextureManager* texmgr, Chunk* chunk) {
 Chunk* get_chunk(Map* map, int chunkX, int chunkY) {
     if (!map)
         return NULL;
+
+    if (map->chunkBuckets && map->chunkBucketCount > 0) {
+        unsigned int index = chunk_hash(chunkX, chunkY) & (map->chunkBucketCount - 1);
+
+        while (map->chunkBuckets[index]) {
+            Chunk* chunk = map->chunkBuckets[index];
+            if (chunk->X == chunkX && chunk->Y == chunkY)
+                return chunk;
+
+            index = (index + 1) & (map->chunkBucketCount - 1);
+        }
+
+        return NULL;
+    }
 
     for (int i = 0; i < map->chunkCount; i++) {
         if (map->Chunks[i]->X == chunkX &&
@@ -259,10 +360,14 @@ Chunk* create_chunk(TextureManager* texmgr, Map* map, int chunkX, int chunkY) {
     map->Chunks[map->chunkCount++] = chunk;
 
     if (!ensure_chunk_tiles(texmgr, chunk)) {
-        free(chunk);
         map->chunkCount--;
+        map->Chunks[map->chunkCount] = NULL;
+        free(chunk);
         return NULL;
     }
+
+    if (!map_insert_chunk_bucket(map, chunk))
+        map_disable_chunk_buckets(map);
 
     return chunk;
 }

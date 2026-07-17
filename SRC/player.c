@@ -5,12 +5,20 @@
 
 Player* player_create(ItemRegistry* itemReg, TextureManager* texmgr){
     Player* player = (Player*)malloc(sizeof(Player));
+    if (!player)
+        return NULL;
+
     player->x = 0;
     player->y = 0;
     player->speed = 5;
     player->rot = M_PI / 2;
     player->state = PLAYER_IDLE;
+    player->walkingState = 0;
     player->entity = create_entity(0, 0, 16, 16);
+    if (!player->entity) {
+        free(player);
+        return NULL;
+    }
     player->entity->scale = 2.0;
 
     player->vp.Left = -SCREEN_W / 2.0;
@@ -19,6 +27,11 @@ Player* player_create(ItemRegistry* itemReg, TextureManager* texmgr){
     player->vp.Height = SCREEN_H;
 
     player->inventory = inventory_create(itemReg, texmgr);
+    if (!player->inventory) {
+        destroy_entity(player->entity);
+        free(player);
+        return NULL;
+    }
     player_select_hud_slot(player, HUD_SLOT_PURPOSE_ATTACK);
 
     return player;
