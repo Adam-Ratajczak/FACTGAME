@@ -534,15 +534,15 @@ int map_can_place_machine(Map* map, int x, int y)
     return 1;
 }
 
-int map_place_machine(TextureManager* texmgr, Map* map, int x, int y, int overlayId, int rotation)
+int map_place_machine(TextureManager* texmgr, ItemRegistry* itemReg, Map* map, int x, int y, int overlayId, int rotation)
 {
-    if (!texmgr || !map || !map_can_place_machine(map, x, y))
+    if (!texmgr || !itemReg || !map || !map_can_place_machine(map, x, y))
         return 0;
 
     if (!get_chunk(map, div_floor(x, CHUNK_SIZE), div_floor(y, CHUNK_SIZE)))
         return 0;
 
-    Machine* machine = machine_create(texmgr, x, y, rotation, overlayId);
+    Machine* machine = machine_create(texmgr, itemReg, x, y, rotation, overlayId);
     if (!machine)
         return 0;
 

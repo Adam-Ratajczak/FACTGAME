@@ -2,6 +2,7 @@
 #define MACHINE_H
 #include "entity.h"
 #include "slot.h"
+#include <time.h>
 
 struct Map;
 struct Machine;
@@ -19,13 +20,19 @@ typedef struct {
     int Y;
     int rotation;
     int overlayId;
+    int fuelMs;
+    int smeltMs;
+    int active;
+    clock_t lastUpdateClock;
+    TextureManager* texmgr;
+    ItemRegistry* itemReg;
     MachineInventory* inventory;
     MachineUpdateFunc update;
 } Machine;
 
 Entity* get_preview_entity(TextureManager* texmgr, int overlayId);
 int machine_get_tile_id(int overlayId);
-Machine* machine_create(TextureManager* texmgr, int x, int y, int rotation, int overlayId);
+Machine* machine_create(TextureManager* texmgr, ItemRegistry* itemReg, int x, int y, int rotation, int overlayId);
 void machine_destroy(Machine* machine);
 void machine_update(Machine* machine, struct Map* map);
 

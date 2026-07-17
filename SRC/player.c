@@ -333,7 +333,7 @@ void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map
                 int ty = div_floor(wy, TILE_SIZE);
 
                 if(slot && player_can_place_machine_at(map, player, tx, ty)){
-                    if(map_place_machine(texmgr, map, tx, ty, overlayId, player->machinePreviewRotation)){
+                    if(map_place_machine(texmgr, itemReg, map, tx, ty, overlayId, player->machinePreviewRotation)){
                         player->machinePreviewCanPlace = 0;
                         player_consume_selected_item(player, slot);
                     }
@@ -427,7 +427,7 @@ void player_open_machine(ItemRegistry* itemReg, Map* map, Player* player){
                 }
 
                 if(machine->inventory){
-                    inventory_show(itemReg, player->inventory, machine->inventory);
+                    inventory_show(machine->itemReg, player->inventory, machine->inventory);
                     return;
                 }
             }

@@ -1,6 +1,10 @@
 #include "machine.h"
+#include "map.h"
 #include <stdlib.h>
-#include <stdlib.h>
+#include <string.h>
+
+#define FURNACE_FUEL_MS 30000
+#define FURNACE_SMELT_MS 5000
 
 int machine_get_tile_id(int overlayId)
 {
@@ -20,10 +24,173 @@ int machine_get_tile_id(int overlayId)
     }
 }
 
+static void machine_set_overlay_state(Machine* machine, struct Map* map, int tileId)
+{
+    Tile* tile = get_tile(map, machine->X, machine->Y, ZINDEX_OVERLAY);
+    if (!tile || !tile->Entity)
+        return;
+
+    int texLeft = 0;
+    int texTop = 0;
+
+    if (!get_tile_def(tileId, &texLeft, &texTop))
+        return;
+
+    tile->TexID = tileId;
+    tile->Entity->sx = texLeft;
+    tile->Entity->sy = texTop;
+}
+
+static int find_furnace_recipe(ItemRegistry* itemReg, int inputItemId, int* outputItemId, int* inputAmount)
+{
+    if (!itemReg)
+        return 0;
+
+    for (int i = 0; i < ITEM_COUNT; ++i) {
+        ItemInfo* info = &itemReg->info[i];
+
+        if (!info->smelting || !info->recipe)
+            continue;
+
+        for (int j = 0; j < info->recipe->requiresCount; ++j) {
+            ItemRecipeRequirement* requirement = &info->recipe->requires[j];
+
+            if (requirement->itemId != inputItemId)
+                continue;
+
+            if (outputItemId)
+                *outputItemId = i;
+            if (inputAmount)
+                *inputAmount = requirement->amount;
+
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+static int furnace_can_output(Slot* outputSlot, int outputItemId)
+{
+    if (!outputSlot)
+        return 0;
+
+    if (!outputSlot->item)
+        return 1;
+
+    return outputSlot->item->itemId == outputItemId &&
+           outputSlot->item->amount < ITEM_STACK_SIZE;
+}
+
+static int furnace_add_output(Machine* machine, Slot* outputSlot, int outputItemId)
+{
+    if (!outputSlot->item) {
+        Item* outputItem = item_create(machine->itemReg, machine->texmgr, outputItemId, 1);
+        if (!outputItem)
+            return 0;
+
+        slot_set_item(outputSlot, outputItem);
+        return 1;
+    }
+
+    outputSlot->item->amount++;
+    return 1;
+}
+
+static void furnace_consume_input(Slot* inputSlot, int amount)
+{
+    inputSlot->item->amount -= amount;
+
+    if (inputSlot->item->amount <= 0) {
+        item_destroy(inputSlot->item);
+        inputSlot->item = NULL;
+    }
+}
+
 static void furnace_update(Machine* machine, struct Map* map)
 {
-    (void)machine;
-    (void)map;
+    if(!machine || !machine->itemReg || !map || !machine->inventory || machine->inventory->slotsCount < 3)
+        return;
+
+    clock_t now = clock();
+    int elapsedMs = 0;
+
+    if (machine->lastUpdateClock != 0 && now > machine->lastUpdateClock) {
+        elapsedMs = (int)(((now - machine->lastUpdateClock) * 1000L) / CLOCKS_PER_SEC);
+    }
+
+    machine->lastUpdateClock = now;
+
+    if (elapsedMs <= 0)
+        return;
+
+    if (elapsedMs > 1000)
+        elapsedMs = 1000;
+
+    Slot* normalA = machine->inventory->slots[0];
+    Slot* normalB = machine->inventory->slots[1];
+    Slot* outputSlot = machine->inventory->slots[2];
+    Slot* coalSlot = NULL;
+    Slot* inputSlot = NULL;
+
+    if (normalA && normalA->item && normalA->item->itemId == ITEM_COAL)
+        coalSlot = normalA;
+    else if (normalB && normalB->item && normalB->item->itemId == ITEM_COAL)
+        coalSlot = normalB;
+
+    if (normalA && normalA != coalSlot && normalA->item)
+        inputSlot = normalA;
+    else if (normalB && normalB != coalSlot && normalB->item)
+        inputSlot = normalB;
+
+    int outputItemId = -1;
+    int inputAmount = 0;
+    int canSmelt = inputSlot &&
+                   inputSlot->item &&
+                   find_furnace_recipe(machine->itemReg, inputSlot->item->itemId, &outputItemId, &inputAmount) &&
+                   inputSlot->item->amount >= inputAmount &&
+                   furnace_can_output(outputSlot, outputItemId);
+
+    if (canSmelt && machine->fuelMs <= 0 && coalSlot && coalSlot->item && coalSlot->item->amount > 0) {
+        coalSlot->item->amount--;
+        machine->fuelMs += FURNACE_FUEL_MS;
+
+        if (coalSlot->item->amount <= 0) {
+            item_destroy(coalSlot->item);
+            coalSlot->item = NULL;
+        }
+    }
+
+    if (machine->fuelMs > 0 && canSmelt) {
+        machine->fuelMs -= elapsedMs;
+        if (machine->fuelMs < 0)
+            machine->fuelMs = 0;
+
+        machine->smeltMs += elapsedMs;
+
+        while (machine->smeltMs >= FURNACE_SMELT_MS && canSmelt) {
+            machine->smeltMs -= FURNACE_SMELT_MS;
+            if (!furnace_add_output(machine, outputSlot, outputItemId))
+                break;
+
+            furnace_consume_input(inputSlot, inputAmount);
+
+            canSmelt = inputSlot &&
+                       inputSlot->item &&
+                       find_furnace_recipe(machine->itemReg, inputSlot->item->itemId, &outputItemId, &inputAmount) &&
+                       inputSlot->item->amount >= inputAmount &&
+                       furnace_can_output(outputSlot, outputItemId);
+        }
+    } else {
+        machine->smeltMs = 0;
+    }
+
+    int active = machine->fuelMs > 0 && canSmelt;
+
+    if (machine->active != active) {
+        machine->active = active;
+        machine_set_overlay_state(machine, map, active ? OVERLAY_FURNACE_ON : OVERLAY_FURNACE_OFF);
+    }
 }
 
 static MachineInventory* get_furnace_inventory(TextureManager* texmgr){
@@ -61,7 +228,7 @@ static MachineInventory* get_furnace_inventory(TextureManager* texmgr){
     return machineInventory;
 }
 
-Machine* machine_create(TextureManager* texmgr, int x, int y, int rotation, int overlayId)
+Machine* machine_create(TextureManager* texmgr, ItemRegistry* itemReg, int x, int y, int rotation, int overlayId)
 {
     Machine* machine = calloc(1, sizeof(*machine));
     if (!machine)
@@ -71,6 +238,8 @@ Machine* machine_create(TextureManager* texmgr, int x, int y, int rotation, int 
     machine->Y = y;
     machine->rotation = rotation;
     machine->overlayId = overlayId;
+    machine->texmgr = texmgr;
+    machine->itemReg = itemReg;
     machine->inventory = NULL;
 
     switch (overlayId) {

@@ -543,9 +543,7 @@ void inventory_click(Inventory* inventory, int x, int y)
     {
         Slot* selected = inventory->selectedSlot;
 
-        if (slot &&
-            slot != selected &&
-            slot->purpose != HUD_SLOT_PURPOSE_CRAFT)
+        if (slot && slot != selected && slot->purpose != HUD_SLOT_PURPOSE_CRAFT)
         {
             int valid = 1;
 
@@ -585,7 +583,12 @@ void inventory_click(Inventory* inventory, int x, int y)
 
     if (slot->purpose == HUD_SLOT_PURPOSE_CRAFT)
     {
-        // TODO: Crafting
+        if(inventory->machineInventory){
+            inventory_pick_item(inventory, slot->item);
+            slot_set_item(slot, NULL);
+        }else{
+            // TODO: crafting
+        }
         return;
     }
 
