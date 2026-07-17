@@ -1,4 +1,5 @@
 #include "hud.h"
+#include "log.h"
 
 HUD* hud_create(ItemRegistry* itemReg, TextureManager* texmgr){
     HUD* hud = (HUD*)malloc(sizeof(HUD));
@@ -17,10 +18,12 @@ HUD* hud_create(ItemRegistry* itemReg, TextureManager* texmgr){
     slot_set_item(hud->slots[2], item_create(itemReg, texmgr, ITEM_FURNACE, 1));
     slot_set_item(hud->slots[3], item_create(itemReg, texmgr, ITEM_MINE, 1));
     hud->selected = -1;
+    hud->selectedInfo = NULL;
 
-    hud_select_slot(hud, ATTACK_SLOT);
+    hud_select_slot(itemReg, hud, ATTACK_SLOT);
     return hud;
 }
+
 void hud_destroy(HUD* hud){
     for(int index = 0; index < INVENTORY_COLS; ++index){
         slot_destroy(hud->slots[index]);
@@ -29,7 +32,7 @@ void hud_destroy(HUD* hud){
     free(hud);
 }
 
-void hud_select_slot(HUD* hud, int slotIndex){
+void hud_select_slot(ItemRegistry* itemReg, HUD* hud, int slotIndex){
     if(!hud || slotIndex < 0 || slotIndex >= INVENTORY_COLS){
         return;
     }
@@ -40,10 +43,21 @@ void hud_select_slot(HUD* hud, int slotIndex){
 
     slot_scale_up(hud->slots[slotIndex]);
     hud->selected = slotIndex;
+
+    if(hud->slots[slotIndex]->item){
+        hud->selectedInfo = &itemReg->info[hud->slots[slotIndex]->item->itemId];
+        log_debug("Item name: %s", hud->selectedInfo->name);
+    }else{
+        hud->selectedInfo = NULL;
+    }
 }
 
-void hud_render(BITMAP* scr, HUD* hud){
-    for(int index = 0; index < INVENTORY_COLS; ++index){
+void hud_render(BITMAP* scr, HUD* hud)
+{
+    if (!scr || !hud)
+        return;
+
+    for (int index = 0; index < INVENTORY_COLS; ++index){
         slot_render(scr, hud->slots[index]);
     }
 }
@@ -247,6 +261,7 @@ void inventory_show(ItemRegistry* itemReg, Inventory* inventory, MachineInventor
     if(!machineInventory)
         inventory_update_crafting(itemReg, inventory);
 }
+
 void inventory_hide(Inventory* inventory){
     inventory->shown = 0;
     inventory->renderSignature = 0;
@@ -529,6 +544,24 @@ void inventory_render(BITMAP* scr, Inventory* inventory){
             makecol(255, 255, 255),
             makecol(0, 0, 0));
     }
+
+
+    if (!inventory->shown && inventory->hud->selectedInfo)
+    {
+        int invHeight = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE;
+        int x = SCREEN_W / 2;
+        int y = (SCREEN_H - invHeight) / 2 + invHeight - text_height(font) - 8;
+
+        textout_centre_ex(
+            scr,
+            font,
+            inventory->hud->selectedInfo->name,
+            x,
+            y,
+            makecol(255, 255, 255),
+            -1
+        );
+    }
 }
 
 Slot* inventory_get_selected_slot(Inventory* inventory){
@@ -690,9 +723,14 @@ void inventory_click(ItemRegistry* itemReg, Inventory* inventory, int x, int y)
 
             if (valid)
             {
-                Item* tmp = selected->item;
-                slot_set_item(selected, slot->item);
-                slot_set_item(slot, tmp);
+                if(selected->item && slot->item && selected->item->itemId == slot->item->itemId){
+                    slot->item->amount += selected->item->amount;
+                    selected->item = NULL;
+                }else{
+                    Item* tmp = selected->item;
+                    slot_set_item(selected, slot->item);
+                    slot_set_item(slot, tmp);
+                }
             }
         }
 

@@ -46,6 +46,14 @@ void slot_render(BITMAP* scr, Slot* slot){
     if(!scr || !slot){
         return;
     }
+    rectfill(
+        scr,
+        slot->sprite->x,
+        slot->sprite->y,
+        slot->sprite->x + slot->sprite->w * slot->sprite->scale,
+        slot->sprite->y + slot->sprite->h * slot->sprite->scale,
+        makecol(16, 16, 16));
+
     render_entity(scr, slot->sprite, NULL);
     if(slot->item){
         item_render(scr, slot->item, NULL);

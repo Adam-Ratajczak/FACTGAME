@@ -44,7 +44,7 @@ void player_mouse_move_action(ItemRegistry* itemReg, TextureManager* texmgr, Map
 
 void player_get_texcoords(int state, int walkingState, int* left, int* top);
 
-void player_select_hud_slot(Player* player, int slotIndex);
+void player_select_hud_slot(ItemRegistry* itemReg, Player* player, int slotIndex);
 void player_toggle_inventory(ItemRegistry* itemReg, Player* player);
 void player_cancel(Player* player);
 void player_pick_drop_items(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player);

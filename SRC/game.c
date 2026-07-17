@@ -85,12 +85,12 @@ void run_game(){
             if (key[KEY_A]) dx_input -= 1;
             if (key[KEY_Q]) player_pick_drop_items(itemReg, texmgr, map, player);
 
-            if (KEY_PRESSED(KEY_1)) player_select_hud_slot(player, 0);
-            if (KEY_PRESSED(KEY_2)) player_select_hud_slot(player, 1);
-            if (KEY_PRESSED(KEY_3)) player_select_hud_slot(player, 2);
-            if (KEY_PRESSED(KEY_4)) player_select_hud_slot(player, 3);
-            if (KEY_PRESSED(KEY_5)) player_select_hud_slot(player, 4);
-            if (KEY_PRESSED(KEY_6)) player_select_hud_slot(player, 5);
+            if (KEY_PRESSED(KEY_1)) player_select_hud_slot(itemReg, player, 0);
+            if (KEY_PRESSED(KEY_2)) player_select_hud_slot(itemReg, player, 1);
+            if (KEY_PRESSED(KEY_3)) player_select_hud_slot(itemReg, player, 2);
+            if (KEY_PRESSED(KEY_4)) player_select_hud_slot(itemReg, player, 3);
+            if (KEY_PRESSED(KEY_5)) player_select_hud_slot(itemReg, player, 4);
+            if (KEY_PRESSED(KEY_6)) player_select_hud_slot(itemReg, player, 5);
 
             if (KEY_PRESSED(KEY_E)) player_toggle_inventory(itemReg, player);
             if (KEY_PRESSED(KEY_F)) player_open_machine(itemReg, map, player);

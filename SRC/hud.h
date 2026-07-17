@@ -8,11 +8,12 @@
 typedef struct {
     Slot* slots[INVENTORY_COLS];
     int selected;
+    ItemInfo* selectedInfo;
 } HUD;
 
 HUD* hud_create(ItemRegistry* itemReg, TextureManager* texmgr);
 void hud_destroy(HUD* hud);
-void hud_select_slot(HUD* hud, int slotIndex);
+void hud_select_slot(ItemRegistry* itemReg, HUD* hud, int slotIndex);
 void hud_render(BITMAP* scr, HUD* hud);
 
 typedef struct {

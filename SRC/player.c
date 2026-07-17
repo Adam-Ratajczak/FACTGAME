@@ -96,6 +96,7 @@ static void player_consume_selected_item(Player* player, Slot* slot)
         item_destroy(slot->item);
         slot->item = NULL;
         player->state = PLAYER_IDLE;
+        player->inventory->hud->selectedInfo = NULL;
         player_clear_machine_preview(player);
     }
 }
@@ -133,7 +134,7 @@ Player* player_create(ItemRegistry* itemReg, TextureManager* texmgr){
         free(player);
         return NULL;
     }
-    player_select_hud_slot(player, HUD_SLOT_PURPOSE_ATTACK);
+    player_select_hud_slot(itemReg, player, HUD_SLOT_PURPOSE_ATTACK);
 
     return player;
 }
@@ -230,7 +231,7 @@ void player_get_texcoords(int state, int walkingState, int* left, int* top){
     *left = walkingState * 16;
 }
 
-void player_select_hud_slot(Player* player, int slotIndex){
+void player_select_hud_slot(ItemRegistry* itemReg, Player* player, int slotIndex){
     if(!player){
         return;
     }
@@ -239,7 +240,7 @@ void player_select_hud_slot(Player* player, int slotIndex){
         return;
     }
 
-    hud_select_slot(player->inventory->hud, slotIndex);
+    hud_select_slot(itemReg, player->inventory->hud, slotIndex);
     player_clear_machine_preview(player);
 
     Slot* selectedSlot = inventory_get_selected_slot(player->inventory);
