@@ -1,0 +1,85 @@
+#include "machine.h"
+#include <stdlib.h>
+#include <stdlib.h>
+
+int machine_get_tile_id(int overlayId)
+{
+    switch(overlayId){
+        case OVERLAY_CONVAYER_BELT:
+            return OVERLAY_CONVAYER_BELT_STRAIGHT;
+        case OVERLAY_FURNACE:
+            return OVERLAY_FURNACE_OFF;
+        case OVERLAY_CRAFTER_HEAD:
+            return OVERLAY_CRAFTER_HEAD_OFF;
+        case OVERLAY_CRAFTER_MODULE:
+            return OVERLAY_CRAFTER_MODULE_H;
+        case OVERLAY_SPLITTER:
+            return OVERLAY_SPLITTER_I;
+        default:
+            return overlayId;
+    }
+}
+
+static void furnace_update(Machine* machine, struct Map* map)
+{
+    (void)machine;
+    (void)map;
+}
+
+Machine* machine_create(int x, int y, int rotation, int overlayId)
+{
+    Machine* machine = calloc(1, sizeof(*machine));
+    if (!machine)
+        return NULL;
+
+    machine->X = x;
+    machine->Y = y;
+    machine->rotation = rotation;
+    machine->overlayId = overlayId;
+
+    switch (overlayId) {
+    case OVERLAY_FURNACE:
+        machine->update = furnace_update;
+        break;
+    default:
+        machine->update = NULL;
+        break;
+    }
+
+    return machine;
+}
+
+void machine_destroy(Machine* machine)
+{
+    if (!machine)
+        return;
+
+    for (int i = 0; i < machine->inventoryCount; ++i)
+        item_destroy(machine->inventory[i]);
+
+    free(machine->inventory);
+    free(machine);
+}
+
+void machine_update(Machine* machine, struct Map* map)
+{
+    if (machine && machine->update)
+        machine->update(machine, map);
+}
+
+Entity* get_preview_entity(TextureManager* texmgr, int overlayId){
+    int id = machine_get_tile_id(overlayId);
+
+    int texLeft, texTop;
+    if(!get_tile_def(id, &texLeft, &texTop)){
+        return NULL;
+    }
+
+    Entity* entity = create_entity(0, 0, TILE_SIZE, TILE_SIZE);
+    if (!entity)
+        return NULL;
+
+    add_sprite_to_entity(texmgr, entity, "ASSETS/TEXTURES/overlays.pcx", texLeft, texTop);
+
+    return entity;
+}

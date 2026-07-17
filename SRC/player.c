@@ -1,7 +1,107 @@
 #include "player.h"
 #include "log.h"
+#include "utils.h"
 #include <time.h>
 #include <math.h>
+
+static int player_tile_x(Player* player)
+{
+    return div_floor(player->x, TILE_SIZE);
+}
+
+static int player_tile_y(Player* player)
+{
+    return div_floor(player->y, TILE_SIZE);
+}
+
+static Slot* player_get_selected_machine_slot(ItemRegistry* itemReg, Player* player, int* overlayId)
+{
+    if (!itemReg || !player || player->state != PLAYER_BUILD)
+        return NULL;
+
+    Slot* slot = inventory_get_selected_slot(player->inventory);
+    if (!slot || !slot->item)
+        return NULL;
+
+    int placedAs = itemReg->info[slot->item->itemId].placedAs;
+
+    if (placedAs != OVERLAY_FURNACE)
+        return NULL;
+
+    if (overlayId)
+        *overlayId = placedAs;
+
+    return slot;
+}
+
+static void player_clear_machine_preview(Player* player)
+{
+    if (!player)
+        return;
+
+    player->machinePreviewCanPlace = 0;
+    player->machinePreviewOverlayId = -1;
+
+    if (player->machinePreview) {
+        destroy_entity(player->machinePreview);
+        player->machinePreview = NULL;
+    }
+}
+
+static int player_can_place_machine_at(Map* map, Player* player, int tx, int ty)
+{
+    if (!map || !player)
+        return 0;
+
+    if (tx == player_tile_x(player) && ty == player_tile_y(player))
+        return 0;
+
+    return map_can_place_machine(map, tx, ty);
+}
+
+static void player_update_machine_preview(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int mouseX, int mouseY)
+{
+    int overlayId = -1;
+    Slot* slot = player_get_selected_machine_slot(itemReg, player, &overlayId);
+
+    if (!slot) {
+        player_clear_machine_preview(player);
+        return;
+    }
+
+    if (!player->machinePreview || player->machinePreviewOverlayId != overlayId) {
+        player_clear_machine_preview(player);
+        player->machinePreview = get_preview_entity(texmgr, overlayId);
+        if (!player->machinePreview)
+            return;
+        player->machinePreviewOverlayId = overlayId;
+    }
+
+    int wx = mouseX + player->vp.Left;
+    int wy = mouseY + player->vp.Top;
+    int tx = div_floor(wx, TILE_SIZE);
+    int ty = div_floor(wy, TILE_SIZE);
+
+    player->machinePreview->x = tx * TILE_SIZE;
+    player->machinePreview->y = ty * TILE_SIZE;
+    player->machinePreview->angle = player->machinePreviewRotation;
+    player->machinePreviewCanPlace = player_can_place_machine_at(map, player, tx, ty);
+}
+
+static void player_consume_selected_item(Player* player, Slot* slot)
+{
+    if (!player || !slot || !slot->item)
+        return;
+
+    slot->item->amount--;
+
+    if (slot->item->amount <= 0) {
+        item_destroy(slot->item);
+        slot->item = NULL;
+        player->state = PLAYER_IDLE;
+        player_clear_machine_preview(player);
+    }
+}
 
 Player* player_create(ItemRegistry* itemReg, TextureManager* texmgr){
     Player* player = (Player*)malloc(sizeof(Player));
@@ -14,6 +114,10 @@ Player* player_create(ItemRegistry* itemReg, TextureManager* texmgr){
     player->rot = M_PI / 2;
     player->state = PLAYER_IDLE;
     player->walkingState = 0;
+    player->machinePreview = NULL;
+    player->machinePreviewOverlayId = -1;
+    player->machinePreviewCanPlace = 0;
+    player->machinePreviewRotation = 0;
     player->entity = create_entity(0, 0, 16, 16);
     if (!player->entity) {
         free(player);
@@ -41,6 +145,7 @@ void player_destroy(Player* player){
     if(!player){
         return;
     }
+    destroy_entity(player->machinePreview);
     destroy_entity(player->entity);
     inventory_destroy(player->inventory);
     free(player);
@@ -112,6 +217,13 @@ void player_render(BITMAP* scr, Player* player){
         return;
     }
 
+    if(player->machinePreview && player->machinePreviewCanPlace){
+        int sx = player->machinePreview->x - player->vp.Left;
+        int sy = player->machinePreview->y - player->vp.Top;
+        rect(scr, sx - 1, sy - 1, sx + TILE_SIZE, sy + TILE_SIZE, makecol(0, 0, 0));
+        render_entity(scr, player->machinePreview, &player->vp);
+    }
+
     render_entity(scr, player->entity, &player->vp);
     inventory_render(scr, player->inventory);
 }
@@ -131,6 +243,7 @@ void player_select_hud_slot(Player* player, int slotIndex){
     }
 
     hud_select_slot(player->inventory->hud, slotIndex);
+    player_clear_machine_preview(player);
 
     Slot* selectedSlot = inventory_get_selected_slot(player->inventory);
     if(!selectedSlot){
@@ -162,6 +275,7 @@ void player_toggle_inventory(ItemRegistry* itemReg, Player* player){
         inventory_hide(player->inventory);
     }else{
         inventory_show(itemReg, player->inventory);
+        player_clear_machine_preview(player);
     }
 }
 
@@ -172,6 +286,7 @@ void player_cancel(Player* player){
 
     if(player->inventory->shown == 1){
         inventory_hide(player->inventory);
+        player_clear_machine_preview(player);
     }
 }
 
@@ -203,6 +318,7 @@ void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map
                             if((tile->TexID & 0xFFF0) == itemReg->info[i].aquiredFrom){
                                 map_drop_item(itemReg, texmgr, map, tx, ty, i, 1);
                                 if((tile->TexID & 0xF000) == TILE_OVERLAY){
+                                    map_remove_machine(map, tx, ty);
                                     set_tile(map, NULL, tx, ty, z);
                                 }
                                 return;
@@ -210,12 +326,24 @@ void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map
                         }
                     }
                 }
+            }else if(player->state == PLAYER_BUILD){
+                int overlayId = -1;
+                Slot* slot = player_get_selected_machine_slot(itemReg, player, &overlayId);
+                int tx = div_floor(wx, TILE_SIZE);
+                int ty = div_floor(wy, TILE_SIZE);
+
+                if(slot && player_can_place_machine_at(map, player, tx, ty)){
+                    if(map_place_machine(texmgr, map, tx, ty, overlayId, player->machinePreviewRotation)){
+                        player->machinePreviewCanPlace = 0;
+                        player_consume_selected_item(player, slot);
+                    }
+                }
             }
         }
     }
 }
 
-void player_mouse_move_action(ItemRegistry* itemReg, Player* player, int x, int y){
+void player_mouse_move_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int x, int y){
     if(!player){
         return;
     }
@@ -230,6 +358,9 @@ void player_mouse_move_action(ItemRegistry* itemReg, Player* player, int x, int 
 
     if(player->inventory->shown){
         inventory_hover(itemReg, player->inventory, x, y);
+        player_clear_machine_preview(player);
+    }else{
+        player_update_machine_preview(itemReg, texmgr, map, player, x, y);
     }
 }
 
@@ -267,5 +398,16 @@ void player_pick_drop_items(ItemRegistry* itemReg, TextureManager* texmgr, Map* 
                 free(items);
             }
         }
+    }
+}
+
+void player_rotate_preview(Player* player){
+    if(!player){
+        return;
+    }
+
+    if(player->machinePreview){
+        player->machinePreviewRotation = (player->machinePreviewRotation + 90) % 360;
+        player->machinePreview->angle = player->machinePreviewRotation;
     }
 }

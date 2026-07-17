@@ -59,8 +59,13 @@ static int map_insert_chunk_bucket(Map* map, Chunk* chunk)
 
     unsigned int index = chunk_hash(chunk->X, chunk->Y) & (map->chunkBucketCount - 1);
 
-    while (map->chunkBuckets[index])
+    while (map->chunkBuckets[index]) {
+        Chunk* existing = map->chunkBuckets[index];
+        if (existing->X == chunk->X && existing->Y == chunk->Y)
+            return 1;
+
         index = (index + 1) & (map->chunkBucketCount - 1);
+    }
 
     map->chunkBuckets[index] = chunk;
     return 1;
@@ -118,6 +123,8 @@ Map* create_map(){
     map->chunkBucketCount = 0;
     map->droppedItemCount = 0;
     map->droppedIems = NULL;
+    map->machineCount = 0;
+    map->machines = NULL;
 
     return map;
 }
@@ -193,7 +200,22 @@ void destroy_map(Map* map){
         free(map->droppedIems[i]);
     }
     free(map->droppedIems);
+
+    for(int i = 0; i < map->machineCount; i++){
+        machine_destroy(map->machines[i]);
+    }
+    free(map->machines);
     free(map);
+}
+
+void map_update(Map* map){
+    if(!map){
+        return;
+    }
+
+    for(int i = 0; i < map->machineCount; ++i){
+        machine_update(map->machines[i], map);
+    }
 }
 
 static int ensure_chunk_tiles(TextureManager* texmgr, Chunk* chunk) {
@@ -483,4 +505,95 @@ DroppedItems* map_release_dropped_items(Map* map, int wx, int wy)
     }
 
     return NULL;
+}
+
+Machine* map_get_machine(Map* map, int x, int y)
+{
+    if (!map)
+        return NULL;
+
+    for (int i = 0; i < map->machineCount; ++i) {
+        if (map->machines[i]->X == x && map->machines[i]->Y == y)
+            return map->machines[i];
+    }
+
+    return NULL;
+}
+
+int map_can_place_machine(Map* map, int x, int y)
+{
+    if (!map)
+        return 0;
+
+    if (get_tile(map, x, y, ZINDEX_OVERLAY))
+        return 0;
+
+    if (map_get_machine(map, x, y))
+        return 0;
+
+    return 1;
+}
+
+int map_place_machine(TextureManager* texmgr, Map* map, int x, int y, int overlayId, int rotation)
+{
+    if (!texmgr || !map || !map_can_place_machine(map, x, y))
+        return 0;
+
+    if (!get_chunk(map, div_floor(x, CHUNK_SIZE), div_floor(y, CHUNK_SIZE)))
+        return 0;
+
+    Machine* machine = machine_create(x, y, rotation, overlayId);
+    if (!machine)
+        return 0;
+
+    Tile* tile = create_tile(texmgr, machine_get_tile_id(overlayId));
+    if (!tile) {
+        machine_destroy(machine);
+        return 0;
+    }
+    tile->Entity->angle = rotation;
+
+    Machine** grown = realloc(map->machines, (map->machineCount + 1) * sizeof(*map->machines));
+    if (!grown) {
+        destroy_tile(tile);
+        machine_destroy(machine);
+        return 0;
+    }
+
+    map->machines = grown;
+    map->machines[map->machineCount++] = machine;
+    set_tile(map, tile, x, y, ZINDEX_OVERLAY);
+
+    return 1;
+}
+
+void map_remove_machine(Map* map, int x, int y)
+{
+    if (!map)
+        return;
+
+    for (int i = 0; i < map->machineCount; ++i) {
+        Machine* machine = map->machines[i];
+
+        if (machine->X != x || machine->Y != y)
+            continue;
+
+        machine_destroy(machine);
+
+        for (int j = i + 1; j < map->machineCount; ++j)
+            map->machines[j - 1] = map->machines[j];
+
+        map->machineCount--;
+
+        if (map->machineCount == 0) {
+            free(map->machines);
+            map->machines = NULL;
+        } else {
+            Machine** grown = realloc(map->machines, map->machineCount * sizeof(*map->machines));
+            if (grown)
+                map->machines = grown;
+        }
+
+        return;
+    }
 }

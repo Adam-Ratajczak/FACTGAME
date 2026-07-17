@@ -71,7 +71,7 @@ void run_game(){
         poll_mouse();
 
         if (event_timer >= event_delay) {
-            player_mouse_move_action(itemReg, player, mouse_x, mouse_y);
+            player_mouse_move_action(itemReg, texmgr, map, player, mouse_x, mouse_y);
             int dx_input = 0;
             int dy_input = 0;
 
@@ -88,8 +88,8 @@ void run_game(){
             if (KEY_PRESSED(KEY_5)) player_select_hud_slot(player, 4);
             if (KEY_PRESSED(KEY_6)) player_select_hud_slot(player, 5);
 
-            if (KEY_PRESSED(KEY_E))
-                player_toggle_inventory(itemReg, player);
+            if (KEY_PRESSED(KEY_E)) player_toggle_inventory(itemReg, player);
+            if (KEY_PRESSED(KEY_R)) player_rotate_preview(player);
 
             if (KEY_PRESSED(KEY_ESC))
                 player_cancel(player);
@@ -107,6 +107,7 @@ void run_game(){
                 prev_mouse_b = mouse_b;
             }
 
+            map_update(map);
             player_update(texmgr, player);
             refresh = 1;
             event_timer = 0;
