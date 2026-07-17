@@ -76,6 +76,26 @@ int slot_get_texcoords(int purpose, int* left, int* top){
     return 0;
 }
 
+void slot_scale_up(Slot* slot){
+    if(!slot || slot->sprite->scale == 1.25){
+        return;
+    }
+
+    slot->sprite->x -= 2;
+    slot->sprite->y -= 2;
+    slot->sprite->scale = 1.25;
+}
+
+void slot_scale_down(Slot* slot){
+    if(!slot || slot->sprite->scale == 1.0){
+        return;
+    }
+
+    slot->sprite->x += 2;
+    slot->sprite->y += 2;
+    slot->sprite->scale = 1.0;
+}
+
 HUD* hud_create(ItemRegistry* itemReg, TextureManager* texmgr){
     HUD* hud = (HUD*)malloc(sizeof(HUD));
     int x = (SCREEN_W - INVENTORY_COLS * SLOT_SIZE) / 2;
@@ -110,17 +130,10 @@ void hud_select_slot(HUD* hud, int slotIndex){
     }
 
     if(hud->selected != -1){
-        Slot* selSlot = hud->slots[hud->selected];
-        selSlot->sprite->x += 2;
-        selSlot->sprite->y += 2;
-        selSlot->sprite->scale = 1.0;
+        slot_scale_down(hud->slots[hud->selected]);
     }
 
-    Slot* selSlot = hud->slots[slotIndex];
-    selSlot->sprite->x -= 2;
-    selSlot->sprite->y -= 2;
-    selSlot->sprite->scale = 1.25;
-
+    slot_scale_up(hud->slots[slotIndex]);
     hud->selected = slotIndex;
 }
 
@@ -141,6 +154,7 @@ Inventory* inventory_create(ItemRegistry* itemReg, TextureManager* texmgr){
     inventory->renderCacheWidth = 0;
     inventory->renderCacheHeight = 0;
     inventory->hoveredInfo = NULL;
+    inventory->selectedSlot = NULL;
 
     int invHeight = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE;
     int y = (SCREEN_H - invHeight) / 2;
@@ -201,10 +215,7 @@ void inventory_show(ItemRegistry* itemReg, Inventory* inventory){
     inventory->shown = 1;
     inventory->renderSignature = 0;
     if(inventory->hud->selected != -1){
-        Slot* selSlot = inventory->hud->slots[inventory->hud->selected];
-        selSlot->sprite->x += 2;
-        selSlot->sprite->y += 2;
-        selSlot->sprite->scale = 1.0;
+        slot_scale_down(inventory->hud->slots[inventory->hud->selected]);
     }
 
     // TODO: crafting table update
@@ -213,10 +224,10 @@ void inventory_hide(Inventory* inventory){
     inventory->shown = 0;
     inventory->renderSignature = 0;
     if(inventory->hud->selected != -1){
-        Slot* selSlot = inventory->hud->slots[inventory->hud->selected];
-        selSlot->sprite->x -= 2;
-        selSlot->sprite->y -= 2;
-        selSlot->sprite->scale = 1.25;
+        slot_scale_up(inventory->hud->slots[inventory->hud->selected]);
+    }
+    if(inventory->selectedSlot){
+        slot_scale_down(inventory->selectedSlot);
     }
 }
 
@@ -565,4 +576,65 @@ void inventory_hover(ItemRegistry* itemReg, Inventory* inventory, int x, int y){
     }
 
     inventory->hoveredInfo = &itemReg->info[slot->item->itemId];
+}
+
+void inventory_click(Inventory* inventory, int x, int y)
+{
+    if (!inventory)
+        return;
+
+    Slot* slot = inventory_get_slot_from_coords(inventory, x, y);
+
+    if (inventory->selectedSlot)
+    {
+        Slot* selected = inventory->selectedSlot;
+
+        if (slot &&
+            slot != selected &&
+            slot->purpose != HUD_SLOT_PURPOSE_CRAFT)
+        {
+            int valid = 1;
+
+            if (selected->item)
+            {
+                switch (slot->purpose)
+                {
+                case HUD_SLOT_PURPOSE_ATTACK:
+                    valid = (selected->item->function == ITEM_FUNCTION_WEAPON);
+                    break;
+
+                case HUD_SLOT_PURPOSE_MINE:
+                    valid = (selected->item->function == ITEM_FUNCTION_TOOL);
+                    break;
+
+                case HUD_SLOT_PURPOSE_BUILD:
+                    valid = (selected->item->function == ITEM_FUNCTION_BLOCK);
+                    break;
+                }
+            }
+
+            if (valid)
+            {
+                Item* tmp = selected->item;
+                slot_set_item(selected, slot->item);
+                slot_set_item(slot, tmp);
+            }
+        }
+
+        slot_scale_down(selected);
+        inventory->selectedSlot = NULL;
+        return;
+    }
+
+    if (!slot)
+        return;
+
+    if (slot->purpose == HUD_SLOT_PURPOSE_CRAFT)
+    {
+        // TODO: Crafting
+        return;
+    }
+
+    inventory->selectedSlot = slot;
+    slot_scale_up(slot);
 }

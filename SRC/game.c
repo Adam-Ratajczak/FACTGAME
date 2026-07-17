@@ -79,8 +79,7 @@ void run_game(){
             if (key[KEY_S]) dy_input -= 1;
             if (key[KEY_D]) dx_input += 1;
             if (key[KEY_A]) dx_input -= 1;
-            if (key[KEY_R])
-                player_pick_items(map, player);
+            if (key[KEY_Q]) player_pick_drop_items(itemReg, texmgr, map, player);
 
             if (KEY_PRESSED(KEY_1)) player_select_hud_slot(player, 0);
             if (KEY_PRESSED(KEY_2)) player_select_hud_slot(player, 1);

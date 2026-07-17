@@ -181,7 +181,9 @@ void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map
     }
 
     if(player->inventory->shown){
-
+        if(button & 1){
+            inventory_click(player->inventory, x, y);
+        }
     }else{
         int wx = x + player->vp.Left;
         int wy = y + player->vp.Top;
@@ -231,28 +233,39 @@ void player_mouse_move_action(ItemRegistry* itemReg, Player* player, int x, int 
     }
 }
 
-void player_pick_items(Map* map, Player* player){
+void player_pick_drop_items(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player){
     if(!map || !player){
         return;
     }
 
     int tx = player->x / TILE_SIZE;
     int ty = player->y / TILE_SIZE;
-    for(int x = tx - 1; x <= tx + 1; x++){
-        for(int y = ty - 1; y <= ty + 1; y++){
-            DroppedItems* items = map_release_dropped_items(map, x, y);
-            if(!items){
-                continue;
-            }
-
-            for(int i = 0; i < items->itemCount; i++){
-                if(!inventory_pick_item(player->inventory, items->items[i])){
-                    item_destroy(items->items[i]);
+    if(player->inventory->shown){
+        Slot* slot = player->inventory->selectedSlot;
+        if(slot && slot->item){
+            map_drop_item(itemReg, texmgr, map, tx, ty, slot->item->itemId, slot->item->amount);
+            item_destroy(slot->item);
+            slot->item = NULL;
+        }
+        slot_scale_down(slot);
+        player->inventory->selectedSlot = NULL;
+    }else{
+        for(int x = tx - 1; x <= tx + 1; x++){
+            for(int y = ty - 1; y <= ty + 1; y++){
+                DroppedItems* items = map_release_dropped_items(map, x, y);
+                if(!items){
+                    continue;
                 }
-            }
 
-            free(items->items);
-            free(items);
+                for(int i = 0; i < items->itemCount; i++){
+                    if(!inventory_pick_item(player->inventory, items->items[i])){
+                        item_destroy(items->items[i]);
+                    }
+                }
+
+                free(items->items);
+                free(items);
+            }
         }
     }
 }

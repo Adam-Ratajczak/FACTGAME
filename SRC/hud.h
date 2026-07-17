@@ -28,6 +28,9 @@ void slot_set_item(Slot* slot, Item* item);
 void slot_render(BITMAP* scr, Slot* slot);
 int slot_get_texcoords(int purpose, int* left, int* top);
 
+void slot_scale_up(Slot* slot);
+void slot_scale_down(Slot* slot);
+
 typedef struct {
     Slot* slots[INVENTORY_COLS];
     int selected;
@@ -49,6 +52,7 @@ typedef struct {
     int renderCacheTop;
     int renderCacheWidth;
     int renderCacheHeight;
+    Slot* selectedSlot;
 
     ItemInfo* hoveredInfo;
 } Inventory;
@@ -65,5 +69,6 @@ Slot* inventory_get_selected_slot(Inventory* inventory);
 int inventory_pick_item(Inventory* inventory, Item* item);
 Slot* inventory_get_slot_from_coords(Inventory* inventory, int x, int y);
 void inventory_hover(ItemRegistry* itemReg, Inventory* inventory, int x, int y);
+void inventory_click(Inventory* inventory, int x, int y);
 
 #endif
