@@ -542,7 +542,7 @@ int map_place_machine(TextureManager* texmgr, Map* map, int x, int y, int overla
     if (!get_chunk(map, div_floor(x, CHUNK_SIZE), div_floor(y, CHUNK_SIZE)))
         return 0;
 
-    Machine* machine = machine_create(x, y, rotation, overlayId);
+    Machine* machine = machine_create(texmgr, x, y, rotation, overlayId);
     if (!machine)
         return 0;
 

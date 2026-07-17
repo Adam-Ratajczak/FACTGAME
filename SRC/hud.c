@@ -1,101 +1,5 @@
 #include "hud.h"
 
-Slot* slot_create(TextureManager* texmgr, int purpose, int x, int y, Item* item){
-    Slot* slot = (Slot*)malloc(sizeof(Slot));
-    slot->purpose = purpose;
-
-    int texLeft, texTop;
-    if(!slot_get_texcoords(purpose, &texLeft, &texTop)){
-        free(slot);
-        return NULL;
-    }
-
-    slot->sprite = create_entity(x, y, 16, 16);
-    add_sprite_to_entity(texmgr, slot->sprite, "ASSETS/TEXTURES/hud.pcx", texLeft, texTop);
-    slot_set_item(slot, item);
-
-    return slot;
-}
-
-void slot_destroy(Slot* slot){
-    if(!slot){
-        return;
-    }
-
-    destroy_entity(slot->sprite);
-    item_destroy(slot->item);
-    free(slot);
-}
-
-void slot_set_item(Slot* slot, Item* item){
-    if(!slot){
-        return;
-    }
-
-    if(item){
-        slot->item = item;
-        slot->item->inInventory = 1;
-        slot->item->sprite->x = slot->sprite->x + 4;
-        slot->item->sprite->y = slot->sprite->y + 4;
-    }else{
-        slot->item = NULL;
-    }
-}
-
-void slot_render(BITMAP* scr, Slot* slot){
-    if(!scr || !slot){
-        return;
-    }
-    render_entity(scr, slot->sprite, NULL);
-    if(slot->item){
-        item_render(scr, slot->item, NULL);
-    }
-}
-
-int slot_get_texcoords(int purpose, int* left, int* top){
-    *top = 0;
-    switch (purpose)
-    {
-    case HUD_SLOT_PURPOSE_NORMAL:
-    case HUD_SLOT_PURPOSE_BUILD:
-        *left = 48;
-        return 1;
-    case HUD_SLOT_PURPOSE_CRAFT:
-        *left = 32;
-        return 1;
-    case HUD_SLOT_PURPOSE_ATTACK:
-        *left = 0;
-        return 1;
-    case HUD_SLOT_PURPOSE_MINE:
-        *left = 16;
-        return 1;
-    default:
-        break;
-    }
-
-    return 0;
-}
-
-void slot_scale_up(Slot* slot){
-    if(!slot || slot->sprite->scale == 1.25){
-        return;
-    }
-
-    slot->sprite->x -= 2;
-    slot->sprite->y -= 2;
-    slot->sprite->scale = 1.25;
-}
-
-void slot_scale_down(Slot* slot){
-    if(!slot || slot->sprite->scale == 1.0){
-        return;
-    }
-
-    slot->sprite->x += 2;
-    slot->sprite->y += 2;
-    slot->sprite->scale = 1.0;
-}
-
 HUD* hud_create(ItemRegistry* itemReg, TextureManager* texmgr){
     HUD* hud = (HUD*)malloc(sizeof(HUD));
     int x = (SCREEN_W - INVENTORY_COLS * SLOT_SIZE) / 2;
@@ -155,6 +59,7 @@ Inventory* inventory_create(ItemRegistry* itemReg, TextureManager* texmgr){
     inventory->renderCacheHeight = 0;
     inventory->hoveredInfo = NULL;
     inventory->selectedSlot = NULL;
+    inventory->machineInventory = NULL;
 
     int invHeight = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE;
     int y = (SCREEN_H - invHeight) / 2;
@@ -207,13 +112,14 @@ int inventory_can_craft(ItemRegistry* itemReg, Inventory* inventory, int itemId)
     return 1;
 }
 
-void inventory_show(ItemRegistry* itemReg, Inventory* inventory){
+void inventory_show(ItemRegistry* itemReg, Inventory* inventory, MachineInventory* machineInventory){
     if(!itemReg || !inventory){
         return;
     }
 
     inventory->shown = 1;
     inventory->renderSignature = 0;
+    inventory->machineInventory = machineInventory;
     if(inventory->hud->selected != -1){
         slot_scale_down(inventory->hud->slots[inventory->hud->selected]);
     }
@@ -223,6 +129,7 @@ void inventory_show(ItemRegistry* itemReg, Inventory* inventory){
 void inventory_hide(Inventory* inventory){
     inventory->shown = 0;
     inventory->renderSignature = 0;
+    inventory->machineInventory = NULL;
     if(inventory->hud->selected != -1){
         slot_scale_up(inventory->hud->slots[inventory->hud->selected]);
     }
@@ -260,8 +167,14 @@ static unsigned long inventory_render_signature(Inventory* inventory)
     sig = (sig ^ (unsigned long)(inventory->hud ? inventory->hud->selected + 1 : 0)) * 16777619u;
 
     if (inventory->shown) {
-        for(int i = 0; i < CRAFTING_ROWS * INVENTORY_COLS; ++i)
-            sig = (sig ^ slot_render_signature(inventory->crafting[i])) * 16777619u;
+        if(inventory->machineInventory){
+            for(int i = 0; i < inventory->machineInventory->slotsCount; ++i)
+                sig = (sig ^ slot_render_signature(inventory->machineInventory->slots[i])) * 16777619u;
+        }else{
+            for(int i = 0; i < CRAFTING_ROWS * INVENTORY_COLS; ++i) {
+                sig = (sig ^ slot_render_signature(inventory->crafting[i])) * 16777619u;
+            }
+        }
 
         for(int i = 0; i < INVENTORY_ROWS * INVENTORY_COLS; ++i)
             sig = (sig ^ slot_render_signature(inventory->slots[i])) * 16777619u;
@@ -306,8 +219,15 @@ static void inventory_get_render_bounds(Inventory* inventory, int* left, int* to
     *top = SCREEN_H;
 
     if (inventory->shown) {
-        for(int i = 0; i < CRAFTING_ROWS * INVENTORY_COLS; ++i)
-            expand_slot_bounds(inventory->crafting[i], left, top, &right, &bottom);
+        if(inventory->machineInventory){
+            for(int i = 0; i < inventory->machineInventory->slotsCount; ++i) {
+                expand_slot_bounds(inventory->machineInventory->slots[i], left, top, &right, &bottom);
+            }
+        }else{
+            for(int i = 0; i < CRAFTING_ROWS * INVENTORY_COLS; ++i) {
+                expand_slot_bounds(inventory->crafting[i], left, top, &right, &bottom);
+            }
+        }
 
         for(int i = 0; i < INVENTORY_ROWS * INVENTORY_COLS; ++i)
             expand_slot_bounds(inventory->slots[i], left, top, &right, &bottom);
@@ -389,9 +309,15 @@ static int inventory_rebuild_render_cache(Inventory* inventory, unsigned long si
     clear_to_color(inventory->renderCache, inventory->renderCache->vtable->mask_color);
 
     if(inventory->shown){
-        for(int i = 0; i < CRAFTING_ROWS; ++i){
-            for(int j = 0; j < INVENTORY_COLS; ++j){
-                slot_render_shifted(inventory->renderCache, inventory->crafting[i * INVENTORY_COLS + j], inventory->renderCacheLeft, inventory->renderCacheTop);
+        if(inventory->machineInventory){
+            for(int i = 0; i < inventory->machineInventory->slotsCount; ++i) {
+                slot_render_shifted(inventory->renderCache, inventory->machineInventory->slots[i], inventory->renderCacheLeft, inventory->renderCacheTop);
+            }
+        }else{
+            for(int i = 0; i < CRAFTING_ROWS; ++i){
+                for(int j = 0; j < INVENTORY_COLS; ++j){
+                    slot_render_shifted(inventory->renderCache, inventory->crafting[i * INVENTORY_COLS + j], inventory->renderCacheLeft, inventory->renderCacheTop);
+                }
             }
         }
         for(int i = 0; i < INVENTORY_ROWS; ++i){
@@ -411,9 +337,27 @@ static int inventory_rebuild_render_cache(Inventory* inventory, unsigned long si
 static void inventory_render_uncached(BITMAP* scr, Inventory* inventory)
 {
     if(inventory->shown){
-        for(int i = 0; i < CRAFTING_ROWS; ++i){
-            for(int j = 0; j < INVENTORY_COLS; ++j){
-                slot_render(scr, inventory->crafting[i * INVENTORY_COLS + j]);
+        if(inventory->machineInventory){
+            int x = SCREEN_W / 2;
+            int y = (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS) * SLOT_SIZE) / 2 - 12;
+
+            textout_centre_ex(
+                scr,
+                font,
+                inventory->machineInventory->name,
+                x,
+                y,
+                makecol(255, 255, 255),
+                makecol(0, 0, 0));
+
+            for(int i = 0; i < inventory->machineInventory->slotsCount; ++i) {
+                slot_render(scr, inventory->machineInventory->slots[i]);
+            }
+        }else{
+            for(int i = 0; i < CRAFTING_ROWS; ++i){
+                for(int j = 0; j < INVENTORY_COLS; ++j){
+                    slot_render(scr, inventory->crafting[i * INVENTORY_COLS + j]);
+                }
             }
         }
         for(int i = 0; i < INVENTORY_ROWS; ++i){
@@ -546,11 +490,21 @@ Slot* inventory_get_slot_from_coords(Inventory* inventory, int x, int y){
         }
     }
 
-    for(int i = 0; i < INVENTORY_COLS * CRAFTING_ROWS; i++){
-        Slot* slot = inventory->crafting[i];
-        Entity* sprite = slot->sprite;
-        if(sprite->x <= x && x <= sprite->x + sprite->w && sprite->y <= y && y <= sprite->y + sprite->h){
-            return slot;
+    if(inventory->machineInventory){
+        for(int i = 0; i < inventory->machineInventory->slotsCount; ++i){
+            Slot* slot = inventory->machineInventory->slots[i];
+            Entity* sprite = slot->sprite;
+            if(sprite->x <= x && x <= sprite->x + sprite->w && sprite->y <= y && y <= sprite->y + sprite->h){
+                return slot;
+            }
+        }
+    }else{
+        for(int i = 0; i < INVENTORY_COLS * CRAFTING_ROWS; i++){
+            Slot* slot = inventory->crafting[i];
+            Entity* sprite = slot->sprite;
+            if(sprite->x <= x && x <= sprite->x + sprite->w && sprite->y <= y && y <= sprite->y + sprite->h){
+                return slot;
+            }
         }
     }
 

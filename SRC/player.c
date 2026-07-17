@@ -274,7 +274,7 @@ void player_toggle_inventory(ItemRegistry* itemReg, Player* player){
     if(player->inventory->shown == 1){
         inventory_hide(player->inventory);
     }else{
-        inventory_show(itemReg, player->inventory);
+        inventory_show(itemReg, player->inventory, NULL);
         player_clear_machine_preview(player);
     }
 }
@@ -410,4 +410,27 @@ void player_rotate_preview(Player* player){
         player->machinePreviewRotation = (player->machinePreviewRotation + 90) % 360;
         player->machinePreview->angle = player->machinePreviewRotation;
     }
+}
+
+void player_open_machine(ItemRegistry* itemReg, Map* map, Player* player){
+    if(!itemReg || !map || !player){
+        return;
+    }
+
+    int tx = player->x / TILE_SIZE;
+    int ty = player->y / TILE_SIZE;
+        for(int x = tx - 1; x <= tx + 1; x++){
+            for(int y = ty - 1; y <= ty + 1; y++){
+                Machine* machine = map_get_machine(map, x, y);
+                if(!machine){
+                    continue;
+                }
+
+                if(machine->inventory){
+                    inventory_show(itemReg, player->inventory, machine->inventory);
+                    return;
+                }
+            }
+        }
+
 }

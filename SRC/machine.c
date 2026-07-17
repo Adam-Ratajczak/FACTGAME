@@ -26,7 +26,42 @@ static void furnace_update(Machine* machine, struct Map* map)
     (void)map;
 }
 
-Machine* machine_create(int x, int y, int rotation, int overlayId)
+static MachineInventory* get_furnace_inventory(TextureManager* texmgr){
+    MachineInventory* machineInventory = (MachineInventory*)malloc(sizeof(MachineInventory));
+    strcpy(machineInventory->name, "Furnace");
+
+    int x = (SCREEN_W - INVENTORY_COLS * SLOT_SIZE) / 2;
+    int y = (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS) * SLOT_SIZE) / 2;
+
+    machineInventory->slots = malloc(sizeof(Slot*) * 3);
+
+    machineInventory->slots[0] = slot_create(
+        texmgr,
+        HUD_SLOT_PURPOSE_NORMAL,
+        x,
+        y,
+        NULL);
+
+    machineInventory->slots[1] = slot_create(
+        texmgr,
+        HUD_SLOT_PURPOSE_NORMAL,
+        x,
+        y + SLOT_SIZE,
+        NULL);
+
+    machineInventory->slots[2] = slot_create(
+        texmgr,
+        HUD_SLOT_PURPOSE_CRAFT,
+        x + SLOT_SIZE * 2,
+        y + SLOT_SIZE / 2,
+        NULL);
+
+    machineInventory->slotsCount = 3;
+
+    return machineInventory;
+}
+
+Machine* machine_create(TextureManager* texmgr, int x, int y, int rotation, int overlayId)
 {
     Machine* machine = calloc(1, sizeof(*machine));
     if (!machine)
@@ -36,10 +71,12 @@ Machine* machine_create(int x, int y, int rotation, int overlayId)
     machine->Y = y;
     machine->rotation = rotation;
     machine->overlayId = overlayId;
+    machine->inventory = NULL;
 
     switch (overlayId) {
     case OVERLAY_FURNACE:
         machine->update = furnace_update;
+        machine->inventory = get_furnace_inventory(texmgr);
         break;
     default:
         machine->update = NULL;
@@ -54,10 +91,14 @@ void machine_destroy(Machine* machine)
     if (!machine)
         return;
 
-    for (int i = 0; i < machine->inventoryCount; ++i)
-        item_destroy(machine->inventory[i]);
+    if(machine->inventory){
+        for (int i = 0; i < machine->inventory->slotsCount; ++i)
+            slot_destroy(machine->inventory->slots[i]);
 
-    free(machine->inventory);
+        free(machine->inventory->slots);
+        free(machine->inventory);
+    }
+
     free(machine);
 }
 

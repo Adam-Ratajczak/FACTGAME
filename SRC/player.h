@@ -50,4 +50,6 @@ void player_cancel(Player* player);
 void player_pick_drop_items(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player);
 void player_rotate_preview(Player* player);
 
+void player_open_machine(ItemRegistry* itemReg, Map* map, Player* player);
+
 #endif

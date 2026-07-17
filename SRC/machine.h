@@ -1,25 +1,31 @@
 #ifndef MACHINE_H
 #define MACHINE_H
 #include "entity.h"
-#include "item.h"
+#include "slot.h"
 
 struct Map;
-typedef struct Machine Machine;
-typedef void (*MachineUpdateFunc)(Machine* machine, struct Map* map);
+struct Machine;
+typedef void (*MachineUpdateFunc)(struct Machine* machine, struct Map* map);
 
-struct Machine {
+typedef struct {
+    Slot** slots;
+    int slotsCount;
+
+    char name[32];
+} MachineInventory;
+
+typedef struct {
     int X;
     int Y;
     int rotation;
     int overlayId;
-    Item** inventory;
-    int inventoryCount;
+    MachineInventory* inventory;
     MachineUpdateFunc update;
-};
+} Machine;
 
 Entity* get_preview_entity(TextureManager* texmgr, int overlayId);
 int machine_get_tile_id(int overlayId);
-Machine* machine_create(int x, int y, int rotation, int overlayId);
+Machine* machine_create(TextureManager* texmgr, int x, int y, int rotation, int overlayId);
 void machine_destroy(Machine* machine);
 void machine_update(Machine* machine, struct Map* map);
 

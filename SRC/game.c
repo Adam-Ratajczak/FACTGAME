@@ -89,6 +89,7 @@ void run_game(){
             if (KEY_PRESSED(KEY_6)) player_select_hud_slot(player, 5);
 
             if (KEY_PRESSED(KEY_E)) player_toggle_inventory(itemReg, player);
+            if (KEY_PRESSED(KEY_F)) player_open_machine(itemReg, map, player);
             if (KEY_PRESSED(KEY_R)) player_rotate_preview(player);
 
             if (KEY_PRESSED(KEY_ESC))
