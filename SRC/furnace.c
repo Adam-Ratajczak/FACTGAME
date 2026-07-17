@@ -217,17 +217,6 @@ MachineInventory* furnace_create_inventory(TextureManager* texmgr){
         NULL);
 
     machineInventory->slotsCount = 3;
-    for(int i = 0; i < machineInventory->slotsCount; ++i){
-        if(machineInventory->slots[i])
-            continue;
-
-        for(int j = 0; j < i; ++j)
-            slot_destroy(machineInventory->slots[j]);
-
-        free(machineInventory->slots);
-        free(machineInventory);
-        return NULL;
-    }
 
     return machineInventory;
 }

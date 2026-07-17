@@ -25,9 +25,6 @@ static Slot* player_get_selected_machine_slot(ItemRegistry* itemReg, Player* pla
 
     int placedAs = itemReg->info[slot->item->itemId].placedAs;
 
-    if (placedAs != OVERLAY_FURNACE)
-        return NULL;
-
     if (overlayId)
         *overlayId = placedAs;
 

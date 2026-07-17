@@ -1,5 +1,6 @@
 #include "machine.h"
 #include "furnace.h"
+#include "mine.h"
 #include "map.h"
 #include <stdlib.h>
 #include <string.h>
@@ -59,6 +60,11 @@ Machine* machine_create(TextureManager* texmgr, ItemRegistry* itemReg, int x, in
         machine->update = furnace_update;
         machine->inventory = furnace_create_inventory(texmgr);
         machine->data = furnace_get_data();
+        break;
+    case OVERLAY_MINE:
+        machine->update = mine_update;
+        machine->inventory = mine_create_inventory(texmgr);
+        machine->data = mine_get_data();
         break;
     default:
         machine->update = NULL;

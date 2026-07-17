@@ -15,6 +15,7 @@ HUD* hud_create(ItemRegistry* itemReg, TextureManager* texmgr){
         x += SLOT_SIZE;
     }
     slot_set_item(hud->slots[2], item_create(itemReg, texmgr, ITEM_FURNACE, 1));
+    slot_set_item(hud->slots[3], item_create(itemReg, texmgr, ITEM_MINE, 1));
     hud->selected = -1;
 
     hud_select_slot(hud, ATTACK_SLOT);
