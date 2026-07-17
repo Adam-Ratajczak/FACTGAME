@@ -5,6 +5,7 @@
 #include "log.h"
 #include "utils.h"
 #include "player.h"
+#include "help.h"
 
 #define KEY_PRESSED(k) (key[(k)] && !prev_key[(k)])
 
@@ -67,6 +68,9 @@ void run_game(){
     position_mouse(SCREEN_W / 2, SCREEN_H / 2);
     int prev_mouse_b = 0;
 
+    int opened_help = 0;
+    Help* help = help_create();
+
     while (!key[KEY_X]) {
         poll_mouse();
 
@@ -92,9 +96,17 @@ void run_game(){
             if (KEY_PRESSED(KEY_F)) player_open_machine(itemReg, map, player);
             if (KEY_PRESSED(KEY_R)) player_rotate_preview(player);
 
-            if (KEY_PRESSED(KEY_ESC))
-                player_cancel(player);
+            if (KEY_PRESSED(KEY_H)) {
+                help_show(help);
+                opened_help = 1;
+            }
+            if (KEY_PRESSED(KEY_LEFT)) help_prev_page(help);
+            if (KEY_PRESSED(KEY_RIGHT)) help_next_page(help);
 
+            if (KEY_PRESSED(KEY_ESC)){
+                player_cancel(player);
+                help_hide(help);
+            }
 
             if (dx_input != 0 || dy_input != 0) {
                 player_move(player, dx_input, dy_input);
@@ -123,6 +135,19 @@ void run_game(){
             render_map(back_buffer, map, &player->vp);
             player_render(back_buffer, player);
 
+            help_render(back_buffer, help);
+            if (!opened_help)
+            {
+                textout_centre_ex(
+                    back_buffer,
+                    font,
+                    "Press H to open help",
+                    SCREEN_W / 2,
+                    SCREEN_H - text_height(font) - 8,
+                    makecol(255, 255, 255),
+                    -1);
+            }
+
             vsync();
 
             scare_mouse();
@@ -134,6 +159,7 @@ void run_game(){
     }
 
 cleanup:
+    help_destroy(help);
     player_destroy(player);
     destroy_map(map);
     item_registry_destroy(itemReg);
