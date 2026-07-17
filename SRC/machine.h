@@ -20,9 +20,7 @@ typedef struct {
     int Y;
     int rotation;
     int overlayId;
-    int fuelMs;
-    int smeltMs;
-    int active;
+    void* data;
     clock_t lastUpdateClock;
     TextureManager* texmgr;
     ItemRegistry* itemReg;
@@ -35,5 +33,6 @@ int machine_get_tile_id(int overlayId);
 Machine* machine_create(TextureManager* texmgr, ItemRegistry* itemReg, int x, int y, int rotation, int overlayId);
 void machine_destroy(Machine* machine);
 void machine_update(Machine* machine, struct Map* map);
+void machine_set_overlay_state(Machine* machine, struct Map* map, int tileId);
 
 #endif

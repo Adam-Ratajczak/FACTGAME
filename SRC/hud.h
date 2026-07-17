@@ -28,6 +28,8 @@ typedef struct {
     int renderCacheHeight;
     Slot* selectedSlot;
 
+    TextureManager* texmgr;
+    int craftingItemIds[INVENTORY_COLS * CRAFTING_ROWS];
     ItemInfo* hoveredInfo;
     MachineInventory* machineInventory;
 } Inventory;
@@ -44,6 +46,6 @@ Slot* inventory_get_selected_slot(Inventory* inventory);
 int inventory_pick_item(Inventory* inventory, Item* item);
 Slot* inventory_get_slot_from_coords(Inventory* inventory, int x, int y);
 void inventory_hover(ItemRegistry* itemReg, Inventory* inventory, int x, int y);
-void inventory_click(Inventory* inventory, int x, int y);
+void inventory_click(ItemRegistry* itemReg, Inventory* inventory, int x, int y);
 
 #endif

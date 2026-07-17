@@ -4,6 +4,7 @@ SHELL := cmd
 CC = gcc
 CFLAGS = -O2 -Wall -Wextra -fmax-errors=1
 DEBUG_CFLAGS = -g -O0 -fno-omit-frame-pointer -Wall -Wextra -fmax-errors=1
+FAST_CFLAGS = -O0 -Wall -Wextra -fmax-errors=1
 CPPFLAGS = -Isrc
 LDFLAGS = -lalleg -lz -Wl,--allow-multiple-definition
 
@@ -18,6 +19,9 @@ all: $(TARGET)
 
 debug: CFLAGS = $(DEBUG_CFLAGS)
 debug: $(TARGET)
+
+fast: CFLAGS = $(FAST_CFLAGS)
+fast: $(TARGET)
 
 $(TARGET): $(OBJ)
 	if not exist "$(OUTDIR)" mkdir "$(OUTDIR)"

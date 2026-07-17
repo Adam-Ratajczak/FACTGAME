@@ -59,7 +59,11 @@ Inventory* inventory_create(ItemRegistry* itemReg, TextureManager* texmgr){
     inventory->renderCacheHeight = 0;
     inventory->hoveredInfo = NULL;
     inventory->selectedSlot = NULL;
+    inventory->texmgr = texmgr;
     inventory->machineInventory = NULL;
+    for(int i = 0; i < INVENTORY_COLS * CRAFTING_ROWS; ++i){
+        inventory->craftingItemIds[i] = -1;
+    }
 
     int invHeight = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE;
     int y = (SCREEN_H - invHeight) / 2;
@@ -107,8 +111,122 @@ void inventory_destroy(Inventory* inventory){
     free(inventory);
 }
 
+static int inventory_count_item(Inventory* inventory, int itemId)
+{
+    int count = 0;
+
+    if(!inventory)
+        return 0;
+
+    for(int i = 0; i < INVENTORY_COLS * INVENTORY_ROWS; ++i){
+        Slot* slot = inventory->slots[i];
+
+        if(slot && slot->item && slot->item->itemId == itemId)
+            count += slot->item->amount;
+    }
+
+    return count;
+}
+
 int inventory_can_craft(ItemRegistry* itemReg, Inventory* inventory, int itemId){
-    // TODO: Proper crafting
+    if(!itemReg || !inventory || itemId < 0 || itemId >= ITEM_COUNT)
+        return 0;
+
+    ItemInfo* info = &itemReg->info[itemId];
+    if(!info->recipe || info->smelting)
+        return 0;
+
+    for(int i = 0; i < info->recipe->requiresCount; ++i){
+        ItemRecipeRequirement* requirement = &info->recipe->requires[i];
+
+        if(inventory_count_item(inventory, requirement->itemId) < requirement->amount)
+            return 0;
+    }
+
+    return 1;
+}
+
+static void inventory_clear_crafting(Inventory* inventory)
+{
+    if(!inventory)
+        return;
+
+    for(int i = 0; i < INVENTORY_COLS * CRAFTING_ROWS; ++i){
+        if(inventory->crafting[i]->item){
+            item_destroy(inventory->crafting[i]->item);
+            slot_set_item(inventory->crafting[i], NULL);
+        }
+        inventory->craftingItemIds[i] = -1;
+    }
+}
+
+static void inventory_update_crafting(ItemRegistry* itemReg, Inventory* inventory)
+{
+    int slotIndex = 0;
+
+    if(!itemReg || !inventory || inventory->machineInventory)
+        return;
+
+    inventory_clear_crafting(inventory);
+
+    for(int itemId = 0; itemId < ITEM_COUNT && slotIndex < INVENTORY_COLS * CRAFTING_ROWS; ++itemId){
+        if(!inventory_can_craft(itemReg, inventory, itemId))
+            continue;
+
+        Item* preview = item_create(itemReg, inventory->texmgr, itemId, 1);
+        if(!preview)
+            continue;
+
+        slot_set_item(inventory->crafting[slotIndex], preview);
+        inventory->craftingItemIds[slotIndex] = itemId;
+        slotIndex++;
+    }
+}
+
+static int inventory_consume_item(Inventory* inventory, int itemId, int amount)
+{
+    if(!inventory || amount <= 0)
+        return 0;
+
+    for(int i = 0; i < INVENTORY_COLS * INVENTORY_ROWS && amount > 0; ++i){
+        Slot* slot = inventory->slots[i];
+
+        if(!slot || !slot->item || slot->item->itemId != itemId)
+            continue;
+
+        if(slot->item->amount > amount){
+            slot->item->amount -= amount;
+            amount = 0;
+        }else{
+            amount -= slot->item->amount;
+            item_destroy(slot->item);
+            slot_set_item(slot, NULL);
+        }
+    }
+
+    return amount == 0;
+}
+
+static int inventory_craft_item(ItemRegistry* itemReg, Inventory* inventory, int itemId)
+{
+    if(!inventory_can_craft(itemReg, inventory, itemId))
+        return 0;
+
+    Item* crafted = item_create(itemReg, inventory->texmgr, itemId, 1);
+    if(!crafted)
+        return 0;
+
+    if(!inventory_pick_item(inventory, crafted)){
+        item_destroy(crafted);
+        return 0;
+    }
+
+    ItemRecipe* recipe = itemReg->info[itemId].recipe;
+    for(int i = 0; i < recipe->requiresCount; ++i){
+        ItemRecipeRequirement* requirement = &recipe->requires[i];
+        inventory_consume_item(inventory, requirement->itemId, requirement->amount);
+    }
+
     return 1;
 }
 
@@ -120,16 +238,20 @@ void inventory_show(ItemRegistry* itemReg, Inventory* inventory, MachineInventor
     inventory->shown = 1;
     inventory->renderSignature = 0;
     inventory->machineInventory = machineInventory;
+    inventory_clear_crafting(inventory);
     if(inventory->hud->selected != -1){
         slot_scale_down(inventory->hud->slots[inventory->hud->selected]);
     }
 
-    // TODO: crafting table update
+    if(!machineInventory)
+        inventory_update_crafting(itemReg, inventory);
 }
 void inventory_hide(Inventory* inventory){
     inventory->shown = 0;
     inventory->renderSignature = 0;
     inventory->machineInventory = NULL;
+    inventory->hoveredInfo = NULL;
+    inventory_clear_crafting(inventory);
     if(inventory->hud->selected != -1){
         slot_scale_up(inventory->hud->slots[inventory->hud->selected]);
     }
@@ -532,7 +654,7 @@ void inventory_hover(ItemRegistry* itemReg, Inventory* inventory, int x, int y){
     inventory->hoveredInfo = &itemReg->info[slot->item->itemId];
 }
 
-void inventory_click(Inventory* inventory, int x, int y)
+void inventory_click(ItemRegistry* itemReg, Inventory* inventory, int x, int y)
 {
     if (!inventory)
         return;
@@ -575,6 +697,8 @@ void inventory_click(Inventory* inventory, int x, int y)
 
         slot_scale_down(selected);
         inventory->selectedSlot = NULL;
+        inventory_update_crafting(itemReg, inventory);
+        inventory->renderSignature = 0;
         return;
     }
 
@@ -584,10 +708,18 @@ void inventory_click(Inventory* inventory, int x, int y)
     if (slot->purpose == HUD_SLOT_PURPOSE_CRAFT)
     {
         if(inventory->machineInventory){
-            inventory_pick_item(inventory, slot->item);
-            slot_set_item(slot, NULL);
+            if(slot->item && inventory_pick_item(inventory, slot->item))
+                slot_set_item(slot, NULL);
         }else{
-            // TODO: crafting
+            for(int i = 0; i < INVENTORY_COLS * CRAFTING_ROWS; ++i){
+                if(slot == inventory->crafting[i] && inventory->craftingItemIds[i] >= 0){
+                    if(inventory_craft_item(itemReg, inventory, inventory->craftingItemIds[i])){
+                        inventory_update_crafting(itemReg, inventory);
+                        inventory->renderSignature = 0;
+                    }
+                    break;
+                }
+            }
         }
         return;
     }

@@ -297,7 +297,7 @@ void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map
 
     if(player->inventory->shown){
         if(button & 1){
-            inventory_click(player->inventory, x, y);
+            inventory_click(itemReg, player->inventory, x, y);
         }
     }else{
         int wx = x + player->vp.Left;
