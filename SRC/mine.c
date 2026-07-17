@@ -129,10 +129,9 @@ MachineInventory* mine_create_inventory(TextureManager* texmgr){
     if(!machineInventory)
         return NULL;
 
-    strcpy(machineInventory->name, "Furnace");
+    strcpy(machineInventory->name, "Mine");
     machineInventory->slots = NULL;
     machineInventory->slotsCount = 0;
-
 
     machineInventory->slots = malloc(sizeof(Slot*));
     if(!machineInventory->slots){

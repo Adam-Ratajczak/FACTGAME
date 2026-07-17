@@ -1,4 +1,5 @@
 #include "item.h"
+#include <stdio.h>
 
 ItemRecipe* item_recipe_create(int firstItemId, ...)
 {
@@ -337,15 +338,19 @@ void item_render(BITMAP* scr, Item* item, const Box* vp)
 
     if (item->amount > 1)
     {
-        textprintf_right_ex(
-            scr,
-            font,
-            x + 8,
-            y,
-            makecol(255, 255, 255),
-            -1,
-            "%d",
-            item->amount);
+        char buf[8];
+        sprintf(buf, "%d", item->amount);
+
+        int tx = x + 8;
+        int ty = y + 8 - text_height(font);
+
+        textout_right_ex(scr, font, buf,
+                        tx + 1, ty + 1,
+                        makecol(0, 0, 0), -1);
+
+        textout_right_ex(scr, font, buf,
+                        tx, ty,
+                        makecol(255, 255, 255), -1);
     }
 
     if (item->maxDurability)
