@@ -4,8 +4,7 @@
 HUD* hud_create(ItemRegistry* itemReg, TextureManager* texmgr){
     HUD* hud = (HUD*)malloc(sizeof(HUD));
     int x = (SCREEN_W - INVENTORY_COLS * SLOT_SIZE) / 2;
-    int invHeight = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE;
-    int y = (SCREEN_H - invHeight) / 2 + invHeight;
+    int y = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE;
 
     hud->slots[ATTACK_SLOT] = slot_create(texmgr, HUD_SLOT_PURPOSE_ATTACK, x, y, item_create(itemReg, texmgr, ITEM_ATTACK_ORB, 1));
     x += SLOT_SIZE;
@@ -16,8 +15,6 @@ HUD* hud_create(ItemRegistry* itemReg, TextureManager* texmgr){
         x += SLOT_SIZE;
     }
     slot_set_item(hud->slots[2], item_create(itemReg, texmgr, ITEM_FURNACE, 1));
-    slot_set_item(hud->slots[3], item_create(itemReg, texmgr, ITEM_MINE, 1));
-    slot_set_item(hud->slots[4], item_create(itemReg, texmgr, ITEM_CONVEYOR_BELT, 10));
     hud->selected = -1;
     hud->selectedInfo = NULL;
 
@@ -77,6 +74,7 @@ Inventory* inventory_create(ItemRegistry* itemReg, TextureManager* texmgr){
     inventory->selectedSlot = NULL;
     inventory->texmgr = texmgr;
     inventory->machineInventory = NULL;
+    inventory->cheatMode = NULL;
     for(int i = 0; i < INVENTORY_COLS * CRAFTING_ROWS; ++i){
         inventory->craftingItemIds[i] = -1;
     }
@@ -186,7 +184,7 @@ static void inventory_update_crafting(ItemRegistry* itemReg, Inventory* inventor
     inventory_clear_crafting(inventory);
 
     for(int itemId = 0; itemId < ITEM_COUNT && slotIndex < INVENTORY_COLS * CRAFTING_ROWS; ++itemId){
-        if(!inventory_can_craft(itemReg, inventory, itemId))
+        if(!inventory->cheatMode && !inventory_can_craft(itemReg, inventory, itemId))
             continue;
 
         Item* preview = item_create(itemReg, inventory->texmgr, itemId, 1);
@@ -225,6 +223,21 @@ static int inventory_consume_item(Inventory* inventory, int itemId, int amount)
 
 static int inventory_craft_item(ItemRegistry* itemReg, Inventory* inventory, int itemId)
 {
+    if(!itemReg || !inventory){
+        return;
+    }
+
+    if(inventory->cheatMode){
+        Item* crafted = item_create(itemReg, inventory->texmgr, itemId, 1);
+        if(!crafted)
+            return 0;
+        if(!inventory_pick_item(inventory, crafted)){
+            item_destroy(crafted);
+            return 0;
+        }
+        return 1;
+    }
+
     if(!inventory_can_craft(itemReg, inventory, itemId))
         return 0;
 
@@ -546,12 +559,11 @@ void inventory_render(BITMAP* scr, Inventory* inventory){
             makecol(0, 0, 0));
     }
 
-
     if (!inventory->shown && inventory->hud->selectedInfo)
     {
         int invHeight = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE;
         int x = SCREEN_W / 2;
-        int y = (SCREEN_H - invHeight) / 2 + invHeight - text_height(font) - 8;
+        int y = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE - text_height(font) - 8;
 
         textout_centre_ex(
             scr,
@@ -766,4 +778,13 @@ void inventory_click(ItemRegistry* itemReg, Inventory* inventory, int x, int y)
 
     inventory->selectedSlot = slot;
     slot_scale_up(slot);
+}
+
+void inventory_toggle_cheat_mode(ItemRegistry* itemReg, Inventory* inventory){
+    if(!itemReg || !inventory){
+        return;
+    }
+
+    inventory->cheatMode = inventory->cheatMode ? 0 : 1;
+    inventory_update_crafting(itemReg, inventory);
 }

@@ -33,6 +33,8 @@ typedef struct {
     int craftingItemIds[INVENTORY_COLS * CRAFTING_ROWS];
     ItemInfo* hoveredInfo;
     MachineInventory* machineInventory;
+
+    int cheatMode;
 } Inventory;
 
 Inventory* inventory_create(ItemRegistry* itemReg, TextureManager* texmgr);
@@ -48,5 +50,6 @@ int inventory_pick_item(Inventory* inventory, Item* item);
 Slot* inventory_get_slot_from_coords(Inventory* inventory, int x, int y);
 void inventory_hover(ItemRegistry* itemReg, Inventory* inventory, int x, int y);
 void inventory_click(ItemRegistry* itemReg, Inventory* inventory, int x, int y);
+void inventory_toggle_cheat_mode(ItemRegistry* itemReg, Inventory* inventory);
 
 #endif

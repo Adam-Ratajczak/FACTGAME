@@ -11,16 +11,14 @@ int main(void) {
     set_uformat(U_ASCII);
 
     if (install_mouse() < 0) {
-        log_debug("No mouse detected (is a DOS mouse driver loaded?)\n");
+        log_debug("No mouse detected (is a DOS mouse driver loaded?)");
         return 1;
     }
 
     set_color_depth(32);
-    if (set_gfx_mode(GFX_AUTODETECT, 640, 480, 0, 0) != 0) {
-        if (set_gfx_mode(GFX_VGA, 320, 200, 0, 0) != 0) {
-            log_debug("Unable to set any graphics mode.\n");
-            return 1;
-        }
+    if (set_gfx_mode(GFX_AUTODETECT, 320, 200, 0, 0) != 0) {
+        log_debug("Couldn't initialize video");
+        return 1;
     }
     set_palette(desktop_palette);
     set_color_conversion(COLORCONV_TOTAL | COLORCONV_KEEP_TRANS);

@@ -341,8 +341,8 @@ void item_render(BITMAP* scr, Item* item, const Box* vp)
         char buf[8];
         sprintf(buf, "%d", item->amount);
 
-        int tx = x + 8;
-        int ty = y + 8 - text_height(font);
+        int tx = x + 12;
+        int ty = y + 12 - text_height(font);
 
         textout_right_ex(scr, font, buf,
                         tx + 1, ty + 1,

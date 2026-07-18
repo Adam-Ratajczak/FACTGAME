@@ -95,6 +95,7 @@ void run_game(){
             if (KEY_PRESSED(KEY_E)) player_toggle_inventory(itemReg, player);
             if (KEY_PRESSED(KEY_F)) player_open_machine(itemReg, map, player);
             if (KEY_PRESSED(KEY_R)) player_rotate_preview(player);
+            if (KEY_PRESSED(KEY_Z)) inventory_toggle_cheat_mode(itemReg, player->inventory);
 
             if (KEY_PRESSED(KEY_H)) {
                 help_show(help);
@@ -143,7 +144,7 @@ void run_game(){
                     font,
                     "Press H to open help",
                     SCREEN_W / 2,
-                    SCREEN_H - text_height(font) - 8,
+                    4,
                     makecol(255, 255, 255),
                     -1);
             }
