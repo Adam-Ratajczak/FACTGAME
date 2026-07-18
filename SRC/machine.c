@@ -77,6 +77,10 @@ Machine* machine_create(TextureManager* texmgr, ItemRegistry* itemReg, int x, in
         machine->inventory = chest_create_inventory(texmgr);
         machine->data = chest_get_data();
         break;
+    case OVERLAY_SPLITTER:
+        machine->update = splitter_update;
+        machine->data = splitter_get_data(texmgr);
+        break;
     default:
         machine->update = NULL;
         break;

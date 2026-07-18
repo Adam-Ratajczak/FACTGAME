@@ -1,5 +1,7 @@
 #include "conveyor.h"
+#include "log.h"
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #define CONVEYOR_MOVE_TICKS 30
@@ -13,6 +15,10 @@ typedef struct {
 int is_conveyor(Machine* machine)
 {
     return machine && machine->overlayId == OVERLAY_CONVEYOR_BELT;
+}
+
+int is_splitter(Machine* machine){
+    return machine && machine->overlayId == OVERLAY_SPLITTER;
 }
 
 static int normalize_rotation(int rotation)
@@ -95,7 +101,7 @@ static int conveyor_select_output(Machine* machine, Map* map, int* outDx, int* o
     for (int i = selfIndex + 1; i < map->machineCount; ++i) {
         Machine* candidate = map->machines[i];
 
-        if (!is_conveyor(candidate))
+        if (!is_conveyor(candidate) && !is_splitter(candidate))
             continue;
 
         dx = candidate->X - machine->X;
@@ -110,7 +116,8 @@ static int conveyor_select_output(Machine* machine, Map* map, int* outDx, int* o
     }
 
     conveyor_direction(machine->rotation, &dx, &dy);
-    if (is_conveyor(map_get_machine(map, machine->X + dx, machine->Y + dy))) {
+    Machine* candidate = map_get_machine(map, machine->X + dx, machine->Y + dy);
+    if (is_conveyor(candidate) || is_splitter(candidate)) {
         *outDx = dx;
         *outDy = dy;
         return 1;
@@ -263,7 +270,13 @@ void conveyor_refresh_near(Map* map, int x, int y)
             if (dx != 0 && dy != 0)
                 continue;
 
-            conveyor_refresh(map_get_machine(map, x + dx, y + dy), map);
+            Machine* machine = map_get_machine(map, x + dx, y + dy);
+            if(is_conveyor(machine)){
+                conveyor_refresh(map_get_machine(map, x + dx, y + dy), map);
+            }
+            if(is_splitter(machine)){
+                splitter_refresh(map_get_machine(map, x + dx, y + dy), map);
+            }
         }
     }
 }
@@ -439,4 +452,208 @@ int conveyor_try_take_item(Machine* machine, struct Map* map, Slot* slot, int po
 
     *dispatchMs -= CONVEYOR_MOVE_MS;
     return 1;
+}
+
+typedef struct {
+    int connected[4];
+    int isInput[4];
+
+    Slot* slots[4];
+    int inputMs[4];
+    int outputMs[4];
+    int nextOutput;
+} SplitterData;
+
+void* splitter_get_data(TextureManager* texmgr)
+{
+    SplitterData* data = calloc(1, sizeof(*data));
+
+    data->slots[0] = slot_create(
+        texmgr,
+        HUD_SLOT_PURPOSE_NORMAL,
+        0,
+        0,
+        NULL);
+
+    data->slots[1] = slot_create(
+        texmgr,
+        HUD_SLOT_PURPOSE_NORMAL,
+        0,
+        0,
+        NULL);
+
+    data->slots[2] = slot_create(
+        texmgr,
+        HUD_SLOT_PURPOSE_NORMAL,
+        0,
+        0,
+        NULL);
+
+    data->slots[3] = slot_create(
+        texmgr,
+        HUD_SLOT_PURPOSE_NORMAL,
+        0,
+        0,
+        NULL);
+
+    return data;
+}
+
+void splitter_refresh(Machine* machine, struct Map* map)
+{
+    if (!machine || !map || !machine->data)
+        return;
+
+    SplitterData* data = machine->data;
+    memset(data->connected, 0, sizeof(data->connected));
+    memset(data->isInput, 0, sizeof(data->isInput));
+
+    int connectedCount = 0;
+
+    for (int dir = MACHINE_POSITION_TOP; dir <= MACHINE_POSITION_LEFT; ++dir)
+    {
+        Machine* neighbor = machine_get_relative_to(machine, map, dir);
+        if (!is_conveyor(neighbor))
+            continue;
+
+        conveyor_refresh(neighbor, map);
+
+        data->connected[dir] = 1;
+        connectedCount++;
+    }
+
+    int overlay = OVERLAY_SPLITTER_ALL;
+    int angle = 0;
+
+    if (connectedCount == 4)
+    {
+        overlay = OVERLAY_SPLITTER_ALL;
+    }
+    else if (connectedCount == 3)
+    {
+        overlay = OVERLAY_SPLITTER_T;
+
+        if (!data->connected[MACHINE_POSITION_TOP])
+            angle = 0;
+        else if (!data->connected[MACHINE_POSITION_RIGHT])
+            angle = 90;
+        else if (!data->connected[MACHINE_POSITION_BOTTOM])
+            angle = 180;
+        else
+            angle = 270;
+    }
+    else if (connectedCount == 2)
+    {
+        overlay = OVERLAY_SPLITTER_I;
+
+        if (data->connected[MACHINE_POSITION_LEFT] && data->connected[MACHINE_POSITION_RIGHT])
+            angle = 90;
+        else
+            angle = 0;
+    }
+
+    machine_set_overlay_state(machine, map, overlay);
+
+    Tile* tile = get_tile(map, machine->X, machine->Y, ZINDEX_OVERLAY);
+    if (tile && tile->Entity)
+        tile->Entity->angle = angle;
+}
+
+void splitter_update(Machine* machine, struct Map* map)
+{
+    if (!machine || !map || !machine->data)
+        return;
+
+    SplitterData* data = machine->data;
+
+    clock_t now = clock();
+    int elapsedMs = 0;
+    if (machine->lastUpdateClock != 0 && now > machine->lastUpdateClock)
+        elapsedMs = (int)(((now - machine->lastUpdateClock) * 1000L) / CLOCKS_PER_SEC);
+
+    machine->lastUpdateClock = now;
+
+    if (elapsedMs <= 0)
+        return;
+
+    if (elapsedMs > 1000)
+        elapsedMs = 1000;
+
+    splitter_refresh(machine, map);
+
+    int outputs[4];
+    int inputs[4];
+    int outputCount = 0;
+    int inputCount = 0;
+
+    for (int pos = MACHINE_POSITION_TOP;
+        pos <= MACHINE_POSITION_LEFT;
+        ++pos)
+    {
+        Machine* neighbor;
+
+        if (!data->connected[pos])
+            continue;
+
+        neighbor = machine_get_relative_to(machine, map, pos);
+        data->isInput[pos] = conveyor_outputs_to(
+            neighbor,
+            machine->X,
+            machine->Y,
+            NULL,
+            NULL);
+
+        if (data->isInput[pos])
+            inputs[inputCount++] = pos;
+        else
+            outputs[outputCount++] = pos;
+    }
+
+    log_debug("splitter (%d,%d) inputs=%d outputs=%d", machine->X, machine->Y, inputCount, outputCount);
+
+    if (!outputCount)
+        return;
+
+    for (int i = 0; i < inputCount; ++i)
+    {
+        int pos = inputs[i];
+
+        Slot* slot = data->slots[pos];
+        if (!slot || slot->item)
+            continue;
+
+        conveyor_try_take_item(
+            machine,
+            map,
+            slot,
+            pos,
+            &data->inputMs[pos],
+            elapsedMs,
+            NULL,
+            NULL);
+    }
+
+    for (int pos = MACHINE_POSITION_TOP; pos <= MACHINE_POSITION_LEFT; ++pos)
+    {
+        Slot* slot = data->slots[pos];
+        if (!slot || !slot->item)
+            continue;
+
+        for (int i = 0; i < outputCount; ++i)
+        {
+            int out = outputs[(data->nextOutput + i) % outputCount];
+
+            if (conveyor_try_dispatch_item(
+                machine,
+                map,
+                slot,
+                out,
+                &data->outputMs[out],
+                elapsedMs))
+            {
+                data->nextOutput = (data->nextOutput + i + 1) % outputCount;
+                break;
+            }
+        }
+    }
 }
