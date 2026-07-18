@@ -126,6 +126,7 @@ Map* create_map(){
     map->droppedIems = NULL;
     map->machineCount = 0;
     map->machines = NULL;
+    map->frame = 0;
 
     return map;
 }
@@ -217,6 +218,8 @@ void map_update(Map* map){
     for(int i = 0; i < map->machineCount; ++i){
         machine_update(map->machines[i], map);
     }
+
+    map->frame++;
 }
 
 static int ensure_chunk_tiles(TextureManager* texmgr, Chunk* chunk) {
@@ -440,6 +443,7 @@ void map_drop_item(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, int 
 
         drop->X = wx;
         drop->Y = wy;
+        drop->lastMoveFrame = map->frame;
 
         map->droppedIems[map->droppedItemCount++] = drop;
     }
@@ -543,6 +547,7 @@ int map_place_dropped_item(Map* map, Item* item, int wx, int wy)
     }
 
     if (existing) {
+        existing->lastMoveFrame = map->frame;
         for (int i = 0; i < existing->itemCount; ++i) {
             Item* target = existing->items[i];
 
@@ -575,6 +580,7 @@ int map_place_dropped_item(Map* map, Item* item, int wx, int wy)
 
     drop->X = wx;
     drop->Y = wy;
+    drop->lastMoveFrame = map->frame;
     drop->items = malloc(sizeof(*drop->items));
     if (!drop->items) {
         free(drop);
@@ -603,6 +609,7 @@ int map_place_dropped_items(Map* map, DroppedItems* items, int wx, int wy)
 
     items->X = wx;
     items->Y = wy;
+    items->lastMoveFrame = map->frame;
 
     for (int i = 0; i < items->itemCount; ++i) {
         if (items->items[i] && items->items[i]->sprite) {
@@ -651,6 +658,7 @@ int map_place_dropped_items(Map* map, DroppedItems* items, int wx, int wy)
 
         existing->items = grown;
         existing->items[existing->itemCount++] = moving;
+        existing->lastMoveFrame = map->frame;
     }
 
     free(items->items);

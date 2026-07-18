@@ -2,8 +2,10 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define CONVEYOR_MOVE_TICKS 30
+#define CONVEYOR_MOVE_MS 500
+
 typedef struct {
-    int elapsedMs;
     int destinationX;
     int destinationY;
 } ConveyorData;
@@ -173,7 +175,6 @@ void* conveyor_get_data()
     if (!data)
         return NULL;
 
-    data->elapsedMs = 0;
     data->destinationX = 0;
     data->destinationY = 0;
 
@@ -199,26 +200,37 @@ void conveyor_refresh(Machine* machine, struct Map* map)
     data->destinationX = machine->X + outDx;
     data->destinationY = machine->Y + outDy;
 
-    for (int dy = -1; dy <= 1; ++dy) {
-        for (int dx = -1; dx <= 1; ++dx) {
-            int fromDx = 0;
-            int fromDy = 0;
-            Machine* neighbor = NULL;
+    Machine* previous = NULL;
+    int prevOutDx = 0;
+    int prevOutDy = 0;
 
+    for (int dy = -1; dy <= 1 && !previous; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
             if ((dx == 0 && dy == 0) || (dx != 0 && dy != 0))
                 continue;
 
-            neighbor = map_get_machine(map, machine->X + dx, machine->Y + dy);
-            if (!conveyor_outputs_to(neighbor, machine->X, machine->Y, &fromDx, &fromDy))
+            Machine* neighbor = map_get_machine(map, machine->X + dx, machine->Y + dy);
+            if (!is_conveyor(neighbor))
                 continue;
 
-            if (fromDx * outDx + fromDy * outDy != 0)
+            int dummyDx, dummyDy;
+            if (!conveyor_outputs_to(neighbor, machine->X, machine->Y, &dummyDx, &dummyDy))
                 continue;
 
-            inDx = fromDx;
-            inDy = fromDy;
-            hasTurnInput = 1;
+            previous = neighbor;
+
+            if (!conveyor_select_output(previous, map, &prevOutDx, &prevOutDy))
+                conveyor_direction(previous->rotation, &prevOutDx, &prevOutDy);
+            break;
         }
+    }
+
+    int hasOutput = is_conveyor(map_get_machine(map, machine->X + outDx, machine->Y + outDy));
+    if (previous && hasOutput && (prevOutDx != outDx || prevOutDy != outDy))
+    {
+        inDx = -prevOutDx;
+        inDy = -prevOutDy;
+        hasTurnInput = 1;
     }
 
     if (hasTurnInput) {
@@ -278,11 +290,7 @@ void conveyor_update(Machine* machine, struct Map* map)
 
     conveyor_refresh(machine, map);
 
-    data->elapsedMs += elapsedMs;
-    if (data->elapsedMs > CONVEYOR_MOVE_MS)
-        data->elapsedMs = CONVEYOR_MOVE_MS;
-
-    if (data->elapsedMs < CONVEYOR_MOVE_MS)
+    if (map->frame % CONVEYOR_MOVE_TICKS != 0)
         return;
 
     if (!is_conveyor(map_get_machine(map, data->destinationX, data->destinationY)))
@@ -295,10 +303,13 @@ void conveyor_update(Machine* machine, struct Map* map)
     if (!items)
         return;
 
+    if (items->lastMoveFrame == map->frame){
+        map_place_dropped_items(map, items, machine->X, machine->Y);
+        return;
+    }
+
     if (!map_place_dropped_items(map, items, data->destinationX, data->destinationY))
         return;
-
-    data->elapsedMs = 0;
 }
 
 static int slot_can_accept(Slot* slot, int itemId)

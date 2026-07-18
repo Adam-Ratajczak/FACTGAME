@@ -26,6 +26,7 @@ typedef struct{
 
     Item** items;
     int itemCount;
+    int lastMoveFrame;
 } DroppedItems;
 
 typedef int (*DroppedItemFilter)(Item* item, void* context);
@@ -41,6 +42,8 @@ typedef struct Map {
 
     Machine** machines;
     int machineCount;
+
+    int frame;
 } Map;
 
 Tile* get_tile(Map* map, int X, int Y, int zIndex);

@@ -3,8 +3,6 @@
 #include "machine.h"
 #include "map.h"
 
-#define CONVEYOR_MOVE_MS 500
-
 int is_conveyor(Machine* machine);
 void conveyor_update(Machine* machine, struct Map* map);
 void* conveyor_get_data();
