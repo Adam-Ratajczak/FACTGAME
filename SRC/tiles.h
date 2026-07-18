@@ -18,7 +18,8 @@
 
 #define OVERLAY_CONVEYOR_BELT               0x1000
 #define OVERLAY_CONVEYOR_BELT_STRAIGHT      0x1001
-#define OVERLAY_CONVEYOR_BELT_TURN          0x1002
+#define OVERLAY_CONVEYOR_BELT_TURN_R        0x1002
+#define OVERLAY_CONVEYOR_BELT_TURN_L        0x1003
 #define OVERLAY_MINE                        0x1010
 #define OVERLAY_FURNACE                     0x1020
 #define OVERLAY_FURNACE_OFF                 0x1021
@@ -35,7 +36,6 @@
 #define OVERLAY_SPLITTER_ALL                0x1051
 #define OVERLAY_SPLITTER_T                  0x1052
 #define OVERLAY_SPLITTER_I                  0x1053
-#define OVERLAY_SPLITTER_L                  0x1054
 #define OVERLAY_CHEST                       0x1060
 
 typedef struct {

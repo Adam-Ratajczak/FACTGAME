@@ -31,6 +31,9 @@ typedef struct
     int machinePreviewOverlayId;
     int machinePreviewCanPlace;
     int machinePreviewRotation;
+
+    int miningX;
+    int miningY;
 } Player;
 
 Player* player_create(ItemRegistry* itemReg, TextureManager* texmgr);

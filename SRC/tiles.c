@@ -108,7 +108,7 @@ static int get_overlay_def(int id, int* left, int* top)
     switch (id)
     {
     case OVERLAY_CONVEYOR_BELT_STRAIGHT: *left =  0; *top =  0; break;
-    case OVERLAY_CONVEYOR_BELT_TURN:     *left = 16; *top =  0; break;
+    case OVERLAY_CONVEYOR_BELT_TURN_R:     *left = 16; *top =  0; break;
 
     case OVERLAY_MINE:                   *left = 32; *top =  0; break;
 
@@ -126,7 +126,8 @@ static int get_overlay_def(int id, int* left, int* top)
     case OVERLAY_SPLITTER_ALL:           *left = 48; *top = 32; break;
     case OVERLAY_SPLITTER_T:             *left =  0; *top = 48; break;
     case OVERLAY_SPLITTER_I:             *left = 16; *top = 48; break;
-    case OVERLAY_SPLITTER_L:             *left = 32; *top = 48; break;
+
+    case OVERLAY_CONVEYOR_BELT_TURN_L:   *left = 32; *top = 48; break;
 
     case OVERLAY_CHEST:                  *left = 48; *top = 48; break;
 

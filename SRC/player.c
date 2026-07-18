@@ -108,6 +108,8 @@ Player* player_create(ItemRegistry* itemReg, TextureManager* texmgr){
 
     player->x = 0;
     player->y = 0;
+    player->miningX = 0;
+    player->miningY = 0;
     player->speed = 5;
     player->rot = M_PI / 2;
     player->state = PLAYER_IDLE;
@@ -215,11 +217,19 @@ void player_render(BITMAP* scr, Player* player){
         return;
     }
 
-    if(player->machinePreview && player->machinePreviewCanPlace){
-        int sx = player->machinePreview->x - player->vp.Left;
-        int sy = player->machinePreview->y - player->vp.Top;
+
+    if(player->state == PLAYER_MINE){
+        int sx = player->miningX * TILE_SIZE - player->vp.Left;
+        int sy = player->miningY * TILE_SIZE - player->vp.Top;
         rect(scr, sx - 1, sy - 1, sx + TILE_SIZE, sy + TILE_SIZE, makecol(0, 0, 0));
-        render_entity(scr, player->machinePreview, &player->vp);
+    }
+    else if(player->state == PLAYER_BUILD){
+        if(player->machinePreview && player->machinePreviewCanPlace){
+            int sx = player->machinePreview->x - player->vp.Left;
+            int sy = player->machinePreview->y - player->vp.Top;
+            rect(scr, sx - 1, sy - 1, sx + TILE_SIZE, sy + TILE_SIZE, makecol(0, 0, 0));
+            render_entity(scr, player->machinePreview, &player->vp);
+        }
     }
 
     render_entity(scr, player->entity, &player->vp);
@@ -356,11 +366,17 @@ void player_mouse_move_action(ItemRegistry* itemReg, TextureManager* texmgr, Map
         return;
     }
 
-    if(player->inventory->shown){
-        inventory_hover(itemReg, player->inventory, x, y);
-        player_clear_machine_preview(player);
-    }else{
-        player_update_machine_preview(itemReg, texmgr, map, player, x, y);
+    if(player->state == PLAYER_MINE){
+        player->miningX = div_floor(wx, TILE_SIZE);
+        player->miningY = div_floor(wy, TILE_SIZE);
+    }
+    else {
+        if(player->inventory->shown){
+            inventory_hover(itemReg, player->inventory, x, y);
+            player_clear_machine_preview(player);
+        }else{
+            player_update_machine_preview(itemReg, texmgr, map, player, x, y);
+        }
     }
 }
 

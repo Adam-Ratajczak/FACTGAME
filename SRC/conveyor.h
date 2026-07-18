@@ -5,12 +5,6 @@
 
 #define CONVEYOR_MOVE_MS 500
 
-typedef struct {
-    int elapsedMs;
-    int destinationX;
-    int destinationY;
-} ConveyorData;
-
 int is_conveyor(Machine* machine);
 void conveyor_update(Machine* machine, struct Map* map);
 void* conveyor_get_data();
