@@ -2,6 +2,7 @@
 #include "furnace.h"
 #include "mine.h"
 #include "chest.h"
+#include "conveyor.h"
 #include "map.h"
 #include <stdlib.h>
 #include <string.h>
@@ -9,8 +10,8 @@
 int machine_get_tile_id(int overlayId)
 {
     switch(overlayId){
-        case OVERLAY_CONVAYER_BELT:
-            return OVERLAY_CONVAYER_BELT_STRAIGHT;
+        case OVERLAY_CONVEYOR_BELT:
+            return OVERLAY_CONVEYOR_BELT_STRAIGHT;
         case OVERLAY_FURNACE:
             return OVERLAY_FURNACE_OFF;
         case OVERLAY_CRAFTER_HEAD:
@@ -57,6 +58,10 @@ Machine* machine_create(TextureManager* texmgr, ItemRegistry* itemReg, int x, in
     machine->data = NULL;
 
     switch (overlayId) {
+    case OVERLAY_CONVEYOR_BELT:
+        machine->update = conveyor_update;
+        machine->data = conveyor_get_data();
+        break;
     case OVERLAY_FURNACE:
         machine->update = furnace_update;
         machine->inventory = furnace_create_inventory(texmgr);
@@ -70,6 +75,7 @@ Machine* machine_create(TextureManager* texmgr, ItemRegistry* itemReg, int x, in
     case OVERLAY_CHEST:
         machine->update = chest_update;
         machine->inventory = chest_create_inventory(texmgr);
+        machine->data = chest_get_data();
         break;
     default:
         machine->update = NULL;
@@ -120,4 +126,34 @@ Entity* get_preview_entity(TextureManager* texmgr, int overlayId){
     add_sprite_to_entity(texmgr, entity, "ASSETS/TEXTURES/overlays.pcx", texLeft, texTop);
 
     return entity;
+}
+
+Machine* machine_get_relative_to(Machine* machine, struct Map* map, int posId)
+{
+    if (!machine || !map)
+        return NULL;
+
+    int dx = 0;
+    int dy = 0;
+
+    switch ((posId + machine->rotation / 90) % 4)
+    {
+        case MACHINE_POSITION_TOP:
+            dy = -1;
+            break;
+
+        case MACHINE_POSITION_RIGHT:
+            dx = 1;
+            break;
+
+        case MACHINE_POSITION_BOTTOM:
+            dy = 1;
+            break;
+
+        case MACHINE_POSITION_LEFT:
+            dx = -1;
+            break;
+    }
+
+    return map_get_machine(map, machine->X + dx, machine->Y + dy);
 }

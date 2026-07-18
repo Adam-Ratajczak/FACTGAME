@@ -35,4 +35,11 @@ void machine_destroy(Machine* machine);
 void machine_update(Machine* machine, struct Map* map);
 void machine_set_overlay_state(Machine* machine, struct Map* map, int tileId);
 
+#define MACHINE_POSITION_TOP 0
+#define MACHINE_POSITION_RIGHT 1
+#define MACHINE_POSITION_BOTTOM 2
+#define MACHINE_POSITION_LEFT 3
+
+Machine* machine_get_relative_to(Machine* machine, struct Map* map, int posId);
+
 #endif

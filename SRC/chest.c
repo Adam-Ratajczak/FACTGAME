@@ -1,10 +1,76 @@
 #include "chest.h"
+#include "conveyor.h"
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 #define CHEST_INVENTORY_ROWS 3
 
+typedef struct {
+    int inputMs;
+    int dispatchMs;
+} ChestData;
+
+void* chest_get_data()
+{
+    ChestData* data = malloc(sizeof(*data));
+    if (!data)
+        return NULL;
+
+    data->inputMs = 0;
+    data->dispatchMs = 0;
+    return data;
+}
+
 void chest_update(Machine* machine, struct Map* map){
-    if(!machine || !map){
+    if(!machine || !map || !machine->inventory || !machine->data){
         return;
+    }
+
+    ChestData* data = machine->data;
+    clock_t now = clock();
+    int elapsedMs = 0;
+
+    if (machine->lastUpdateClock != 0 && now > machine->lastUpdateClock)
+        elapsedMs = (int)(((now - machine->lastUpdateClock) * 1000L) / CLOCKS_PER_SEC);
+
+    machine->lastUpdateClock = now;
+
+    if (elapsedMs <= 0)
+        return;
+
+    if (elapsedMs > 1000)
+        elapsedMs = 1000;
+
+    for (int i = 0; i < machine->inventory->slotsCount; ++i) {
+        int addElapsed = i == 0 ? elapsedMs : 0;
+
+        if (conveyor_try_take_item(
+                machine,
+                map,
+                machine->inventory->slots[i],
+                MACHINE_POSITION_LEFT,
+                &data->inputMs,
+                addElapsed,
+                NULL,
+                NULL))
+            break;
+    }
+
+    for (int i = 0; i < machine->inventory->slotsCount; ++i) {
+        Slot* slot = machine->inventory->slots[i];
+
+        if (!slot || !slot->item)
+            continue;
+
+        conveyor_try_dispatch_item(
+            machine,
+            map,
+            slot,
+            MACHINE_POSITION_RIGHT,
+            &data->dispatchMs,
+            elapsedMs);
+        break;
     }
 }
 

@@ -148,8 +148,8 @@ ItemRegistry* item_registry_create(void)
     strcpy(reg->info[ITEM_CONVEYOR_BELT].name, "Conveyor Belt");
     reg->info[ITEM_CONVEYOR_BELT].maxDurability = 0;
     reg->info[ITEM_CONVEYOR_BELT].function = ITEM_FUNCTION_BLOCK;
-    reg->info[ITEM_CONVEYOR_BELT].aquiredFrom = OVERLAY_CONVAYER_BELT;
-    reg->info[ITEM_CONVEYOR_BELT].placedAs = OVERLAY_CONVAYER_BELT;
+    reg->info[ITEM_CONVEYOR_BELT].aquiredFrom = OVERLAY_CONVEYOR_BELT;
+    reg->info[ITEM_CONVEYOR_BELT].placedAs = OVERLAY_CONVEYOR_BELT;
     reg->info[ITEM_CONVEYOR_BELT].smelting = 0;
     reg->info[ITEM_CONVEYOR_BELT].recipe =
         item_recipe_create(

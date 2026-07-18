@@ -16,9 +16,9 @@
 #define BLOCK_ORE_IRON      0x0060
 #define BLOCK_ORE_COAL      0x0070
 
-#define OVERLAY_CONVAYER_BELT               0x1000
-#define OVERLAY_CONVAYER_BELT_STRAIGHT      0x1001
-#define OVERLAY_CONVAYER_BELT_TURN          0x1002
+#define OVERLAY_CONVEYOR_BELT               0x1000
+#define OVERLAY_CONVEYOR_BELT_STRAIGHT      0x1001
+#define OVERLAY_CONVEYOR_BELT_TURN          0x1002
 #define OVERLAY_MINE                        0x1010
 #define OVERLAY_FURNACE                     0x1020
 #define OVERLAY_FURNACE_OFF                 0x1021

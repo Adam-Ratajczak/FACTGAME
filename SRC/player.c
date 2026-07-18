@@ -303,8 +303,8 @@ void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map
         if(button & 1){
             if(player->state == PLAYER_MINE){
                 if((player->x - wx) * (player->x - wx) + (player->y - wy) * (player->y - wy) <= PLAYER_MINING_RADIUS * PLAYER_MINING_RADIUS){
-                    int tx = wx / TILE_SIZE;
-                    int ty = wy / TILE_SIZE;
+                    int tx = div_floor(wx, TILE_SIZE);
+                    int ty = div_floor(wy, TILE_SIZE);
 
                     for(int z = 3; z >= 0; --z){
                         Tile* tile = get_tile(map, tx, ty, z);
@@ -325,15 +325,17 @@ void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map
                     }
                 }
             }else if(player->state == PLAYER_BUILD){
-                int overlayId = -1;
-                Slot* slot = player_get_selected_machine_slot(itemReg, player, &overlayId);
-                int tx = div_floor(wx, TILE_SIZE);
-                int ty = div_floor(wy, TILE_SIZE);
+                if((player->x - wx) * (player->x - wx) + (player->y - wy) * (player->y - wy) <= PLAYER_MINING_RADIUS * PLAYER_MINING_RADIUS){
+                    int overlayId = -1;
+                    Slot* slot = player_get_selected_machine_slot(itemReg, player, &overlayId);
+                    int tx = div_floor(wx, TILE_SIZE);
+                    int ty = div_floor(wy, TILE_SIZE);
 
-                if(slot && player_can_place_machine_at(map, player, tx, ty)){
-                    if(map_place_machine(texmgr, itemReg, map, tx, ty, overlayId, player->machinePreviewRotation)){
-                        player->machinePreviewCanPlace = 0;
-                        player_consume_selected_item(player, slot);
+                    if(slot && player_can_place_machine_at(map, player, tx, ty)){
+                        if(map_place_machine(texmgr, itemReg, map, tx, ty, overlayId, player->machinePreviewRotation)){
+                            player->machinePreviewCanPlace = 0;
+                            player_consume_selected_item(player, slot);
+                        }
                     }
                 }
             }

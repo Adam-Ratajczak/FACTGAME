@@ -1,15 +1,23 @@
 #include "mine.h"
+#include "conveyor.h"
+#include <stdlib.h>
+#include <string.h>
 
 #define MINE_MINING_MS 3000
 
 typedef struct {
     int miningMs;
+    int dispatchingMs;
     int active;
 } MineData;
 
 void* mine_get_data(){
     MineData* data = (MineData*)malloc(sizeof(MineData));
+    if (!data)
+        return NULL;
+
     data->miningMs = 0;
+    data->dispatchingMs = 0;
     data->active = 0;
     return data;
 }
@@ -122,6 +130,14 @@ void mine_update(Machine* machine, struct Map* map)
             map,
             OVERLAY_MINE);
     }
+
+    conveyor_try_dispatch_item(
+        machine,
+        map,
+        output,
+        MACHINE_POSITION_RIGHT,
+        &data->dispatchingMs,
+        elapsedMs);
 }
 
 MachineInventory* mine_create_inventory(TextureManager* texmgr){

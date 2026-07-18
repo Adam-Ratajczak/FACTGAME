@@ -5,6 +5,7 @@
 #include "zlib.h"
 #include "perlin.h"
 #include "alwrap.h"
+#include "conveyor.h"
 
 static unsigned int chunk_hash(int chunkX, int chunkY)
 {
@@ -471,6 +472,27 @@ void map_drop_item(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, int 
     log_debug("Dropped %x at (%d, %d)", itemId, item->sprite->x, item->sprite->y);
 }
 
+static DroppedItems* map_find_dropped_items(Map* map, int wx, int wy)
+{
+    if (!map)
+        return NULL;
+
+    for (int i = 0; i < map->droppedItemCount; ++i) {
+        DroppedItems* drop = map->droppedIems[i];
+
+        if (drop->X == wx && drop->Y == wy)
+            return drop;
+    }
+
+    return NULL;
+}
+
+int map_has_dropped_items(Map* map, int wx, int wy)
+{
+    DroppedItems* drop = map_find_dropped_items(map, wx, wy);
+    return drop && drop->itemCount > 0;
+}
+
 DroppedItems* map_release_dropped_items(Map* map, int wx, int wy)
 {
     if (!map)
@@ -502,6 +524,183 @@ DroppedItems* map_release_dropped_items(Map* map, int wx, int wy)
         }
 
         return drop;
+    }
+
+    return NULL;
+}
+
+int map_place_dropped_item(Map* map, Item* item, int wx, int wy)
+{
+    if (!map || !item)
+        return 0;
+
+    DroppedItems* existing = map_find_dropped_items(map, wx, wy);
+
+    item->inInventory = 0;
+    if (item->sprite) {
+        item->sprite->x = wx * TILE_SIZE + 4;
+        item->sprite->y = wy * TILE_SIZE + 4;
+    }
+
+    if (existing) {
+        for (int i = 0; i < existing->itemCount; ++i) {
+            Item* target = existing->items[i];
+
+            if (!target || target->itemId != item->itemId)
+                continue;
+
+            target->amount += item->amount;
+            item_destroy(item);
+            return 1;
+        }
+
+        Item** grown = realloc(existing->items, (existing->itemCount + 1) * sizeof(*existing->items));
+        if (!grown)
+            return 0;
+
+        existing->items = grown;
+        existing->items[existing->itemCount++] = item;
+        return 1;
+    }
+
+    DroppedItems** grownDrops = realloc(map->droppedIems, (map->droppedItemCount + 1) * sizeof(*map->droppedIems));
+    if (!grownDrops)
+        return 0;
+
+    map->droppedIems = grownDrops;
+
+    DroppedItems* drop = calloc(1, sizeof(*drop));
+    if (!drop)
+        return 0;
+
+    drop->X = wx;
+    drop->Y = wy;
+    drop->items = malloc(sizeof(*drop->items));
+    if (!drop->items) {
+        free(drop);
+        return 0;
+    }
+
+    drop->items[0] = item;
+    drop->itemCount = 1;
+    map->droppedIems[map->droppedItemCount++] = drop;
+    return 1;
+}
+
+int map_place_dropped_items(Map* map, DroppedItems* items, int wx, int wy)
+{
+    if (!map || !items)
+        return 0;
+
+    DroppedItems* existing = NULL;
+
+    for (int i = 0; i < map->droppedItemCount; ++i) {
+        if (map->droppedIems[i]->X == wx && map->droppedIems[i]->Y == wy) {
+            existing = map->droppedIems[i];
+            break;
+        }
+    }
+
+    items->X = wx;
+    items->Y = wy;
+
+    for (int i = 0; i < items->itemCount; ++i) {
+        if (items->items[i] && items->items[i]->sprite) {
+            items->items[i]->sprite->x = wx * TILE_SIZE + 4;
+            items->items[i]->sprite->y = wy * TILE_SIZE + 4;
+        }
+    }
+
+    if (!existing) {
+        DroppedItems** grown = realloc(map->droppedIems, (map->droppedItemCount + 1) * sizeof(*map->droppedIems));
+        if (!grown)
+            return 0;
+
+        map->droppedIems = grown;
+        map->droppedIems[map->droppedItemCount++] = items;
+        return 1;
+    }
+
+    for (int i = 0; i < items->itemCount; ++i) {
+        Item* moving = items->items[i];
+        int merged = 0;
+
+        if (!moving)
+            continue;
+
+        for (int j = 0; j < existing->itemCount; ++j) {
+            Item* target = existing->items[j];
+
+            if (!target || target->itemId != moving->itemId)
+                continue;
+
+            target->amount += moving->amount;
+            item_destroy(moving);
+            merged = 1;
+            break;
+        }
+
+        if (merged)
+            continue;
+
+        Item** grown = realloc(existing->items, (existing->itemCount + 1) * sizeof(*existing->items));
+        if (!grown) {
+            item_destroy(moving);
+            continue;
+        }
+
+        existing->items = grown;
+        existing->items[existing->itemCount++] = moving;
+    }
+
+    free(items->items);
+    free(items);
+    return 1;
+}
+
+Item* map_take_dropped_item(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, int wx, int wy, DroppedItemFilter filter, void* context)
+{
+    if (!itemReg || !texmgr || !map)
+        return NULL;
+
+    DroppedItems* drop = map_find_dropped_items(map, wx, wy);
+    if (!drop)
+        return NULL;
+
+    for (int i = 0; i < drop->itemCount; ++i) {
+        Item* item = drop->items[i];
+
+        if (!item || (filter && !filter(item, context)))
+            continue;
+
+        if (item->amount > 1) {
+            Item* split = item_create(itemReg, texmgr, item->itemId, 1);
+            if (!split)
+                return NULL;
+
+            item->amount--;
+            return split;
+        }
+
+        for (int j = i + 1; j < drop->itemCount; ++j)
+            drop->items[j - 1] = drop->items[j];
+
+        drop->itemCount--;
+
+        if (drop->itemCount == 0) {
+            DroppedItems* released = map_release_dropped_items(map, wx, wy);
+            if (released) {
+                free(released->items);
+                free(released);
+            }
+        } else {
+            Item** grown = realloc(drop->items, drop->itemCount * sizeof(*drop->items));
+            if (grown)
+                drop->items = grown;
+        }
+
+        item->inInventory = 0;
+        return item;
     }
 
     return NULL;
@@ -563,6 +762,7 @@ int map_place_machine(TextureManager* texmgr, ItemRegistry* itemReg, Map* map, i
     map->machines = grown;
     map->machines[map->machineCount++] = machine;
     set_tile(map, tile, x, y, ZINDEX_OVERLAY);
+    conveyor_refresh_near(map, x, y);
 
     return 1;
 }
@@ -594,6 +794,8 @@ void map_remove_machine(Map* map, int x, int y)
                 map->machines = grown;
         }
 
+        set_tile(map, NULL, x, y, ZINDEX_OVERLAY);
+        conveyor_refresh_near(map, x, y);
         return;
     }
 }

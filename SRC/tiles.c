@@ -107,8 +107,8 @@ static int get_overlay_def(int id, int* left, int* top)
 {
     switch (id)
     {
-    case OVERLAY_CONVAYER_BELT_STRAIGHT: *left =  0; *top =  0; break;
-    case OVERLAY_CONVAYER_BELT_TURN:     *left = 16; *top =  0; break;
+    case OVERLAY_CONVEYOR_BELT_STRAIGHT: *left =  0; *top =  0; break;
+    case OVERLAY_CONVEYOR_BELT_TURN:     *left = 16; *top =  0; break;
 
     case OVERLAY_MINE:                   *left = 32; *top =  0; break;
 

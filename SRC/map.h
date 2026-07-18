@@ -28,7 +28,9 @@ typedef struct{
     int itemCount;
 } DroppedItems;
 
-typedef struct {
+typedef int (*DroppedItemFilter)(Item* item, void* context);
+
+typedef struct Map {
     Chunk** Chunks;
     int chunkCount;
     Chunk** chunkBuckets;
@@ -50,7 +52,11 @@ void destroy_map(Map* map);
 void map_update(Map* map);
 
 void map_drop_item(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, int wx, int wy, int itemId, int amount);
+int map_has_dropped_items(Map* map, int wx, int wy);
 DroppedItems* map_release_dropped_items(Map* map, int wx, int wy);
+int map_place_dropped_items(Map* map, DroppedItems* items, int wx, int wy);
+int map_place_dropped_item(Map* map, Item* item, int wx, int wy);
+Item* map_take_dropped_item(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, int wx, int wy, DroppedItemFilter filter, void* context);
 
 Machine* map_get_machine(Map* map, int x, int y);
 int map_can_place_machine(Map* map, int x, int y);

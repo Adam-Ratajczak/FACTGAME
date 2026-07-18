@@ -17,6 +17,7 @@ HUD* hud_create(ItemRegistry* itemReg, TextureManager* texmgr){
     }
     slot_set_item(hud->slots[2], item_create(itemReg, texmgr, ITEM_FURNACE, 1));
     slot_set_item(hud->slots[3], item_create(itemReg, texmgr, ITEM_MINE, 1));
+    slot_set_item(hud->slots[4], item_create(itemReg, texmgr, ITEM_CONVEYOR_BELT, 10));
     hud->selected = -1;
     hud->selectedInfo = NULL;
 

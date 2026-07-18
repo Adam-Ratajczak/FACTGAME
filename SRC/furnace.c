@@ -1,4 +1,5 @@
 #include "furnace.h"
+#include "conveyor.h"
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -9,6 +10,9 @@
 typedef struct {
     int fuelMs;
     int smeltMs;
+    int coalInputMs;
+    int smeltableInputMs;
+    int dispatchMs;
     int active;
 } FurnaceData;
 
@@ -20,6 +24,9 @@ void* furnace_get_data(){
     data->active = 0;
     data->fuelMs = 0;
     data->smeltMs = 0;
+    data->coalInputMs = 0;
+    data->smeltableInputMs = 0;
+    data->dispatchMs = 0;
 
     return data;
 }
@@ -90,6 +97,23 @@ static void furnace_consume_input(Slot* inputSlot, int amount)
     }
 }
 
+static int item_is_coal(Item* item, void* context)
+{
+    (void)context;
+    return item && item->itemId == ITEM_COAL;
+}
+
+static int item_is_smeltable(Item* item, void* context)
+{
+    ItemRegistry* itemReg = context;
+    int outputItemId = -1;
+    int inputAmount = 0;
+
+    return item &&
+           find_furnace_recipe(itemReg, item->itemId, &outputItemId, &inputAmount) &&
+           inputAmount > 0;
+}
+
 void furnace_update(Machine* machine, struct Map* map)
 {
     if(!machine || !machine->itemReg || !map || !machine->inventory || !machine->data || machine->inventory->slotsCount < 3)
@@ -111,21 +135,29 @@ void furnace_update(Machine* machine, struct Map* map)
     if (elapsedMs > 1000)
         elapsedMs = 1000;
 
-    Slot* normalA = machine->inventory->slots[0];
-    Slot* normalB = machine->inventory->slots[1];
+    Slot* coalSlot = machine->inventory->slots[0];
+    Slot* inputSlot = machine->inventory->slots[1];
     Slot* outputSlot = machine->inventory->slots[2];
-    Slot* coalSlot = NULL;
-    Slot* inputSlot = NULL;
 
-    if (normalA && normalA->item && normalA->item->itemId == ITEM_COAL)
-        coalSlot = normalA;
-    else if (normalB && normalB->item && normalB->item->itemId == ITEM_COAL)
-        coalSlot = normalB;
+    conveyor_try_take_item(
+        machine,
+        map,
+        coalSlot,
+        MACHINE_POSITION_LEFT,
+        &data->coalInputMs,
+        elapsedMs,
+        item_is_coal,
+        NULL);
 
-    if (normalA && normalA != coalSlot && normalA->item)
-        inputSlot = normalA;
-    else if (normalB && normalB != coalSlot && normalB->item)
-        inputSlot = normalB;
+    conveyor_try_take_item(
+        machine,
+        map,
+        inputSlot,
+        MACHINE_POSITION_BOTTOM,
+        &data->smeltableInputMs,
+        elapsedMs,
+        item_is_smeltable,
+        machine->itemReg);
 
     int outputItemId = -1;
     int inputAmount = 0;
@@ -175,6 +207,14 @@ void furnace_update(Machine* machine, struct Map* map)
         data->active = active;
         machine_set_overlay_state(machine, map, active ? OVERLAY_FURNACE_ON : OVERLAY_FURNACE_OFF);
     }
+
+    conveyor_try_dispatch_item(
+        machine,
+        map,
+        outputSlot,
+        MACHINE_POSITION_RIGHT,
+        &data->dispatchMs,
+        elapsedMs);
 }
 
 MachineInventory* furnace_create_inventory(TextureManager* texmgr){
