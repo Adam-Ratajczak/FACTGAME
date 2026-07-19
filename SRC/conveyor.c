@@ -32,36 +32,22 @@ int conveyor_accepts_input_at(Machine* machine, int x, int y)
 
 static void conveyor_direction(int rotation, int* dx, int* dy)
 {
-    *dx = 0;
-    *dy = 0;
 
-    switch (normalize_rotation(rotation)) {
+    switch (normalize_rotation(rotation))
+    {
     case 90:
-        *dy = 1;
+        *dx = 1; *dy = 0;
         break;
     case 180:
-        *dx = -1;
+        *dx = 0; *dy = 1;
         break;
     case 270:
-        *dy = -1;
+        *dx = -1; *dy = 0;
         break;
     default:
-        *dx = 1;
+        *dx = 0; *dy = -1;
         break;
     }
-}
-
-static int machine_index(Map* map, Machine* machine)
-{
-    if (!map || !machine)
-        return -1;
-
-    for (int i = 0; i < map->machineCount; ++i) {
-        if (map->machines[i] == machine)
-            return i;
-    }
-
-    return -1;
 }
 
 static int conveyor_outputs_to(Machine* machine, int x, int y, int* fromDx, int* fromDy)
@@ -103,40 +89,6 @@ static int conveyor_outputs_to(Machine* machine, int x, int y, int* fromDx, int*
     return 1;
 }
 
-static int conveyor_select_output(Machine* machine, Map* map, int* outDx, int* outDy)
-{
-    int dx = 0;
-    int dy = 0;
-    int selfIndex = machine_index(map, machine);
-
-    for (int i = selfIndex + 1; i < map->machineCount; ++i) {
-        Machine* candidate = map->machines[i];
-
-        if (!is_conveyor(candidate) && !is_splitter(candidate))
-            continue;
-
-        dx = candidate->X - machine->X;
-        dy = candidate->Y - machine->Y;
-
-        if ((dx == 0 && (dy == -1 || dy == 1)) ||
-            (dy == 0 && (dx == -1 || dx == 1))) {
-            *outDx = dx;
-            *outDy = dy;
-            return 1;
-        }
-    }
-
-    conveyor_direction(machine->rotation, &dx, &dy);
-    Machine* candidate = map_get_machine(map, machine->X + dx, machine->Y + dy);
-    if (is_conveyor(candidate) || is_splitter(candidate)) {
-        *outDx = dx;
-        *outDy = dy;
-        return 1;
-    }
-
-    return 0;
-}
-
 static void conveyor_turn_transform(
     int inDx, int inDy,
     int outDx, int outDy,
@@ -145,43 +97,17 @@ static void conveyor_turn_transform(
 {
     *scale = 1;
 
-    // Right turns (base sprite and its rotations)
-    if (inDx == 0 && inDy == 1 && outDx == 1 && outDy == 0) {        // S -> E
-        *angle = 0;
-        return;
-    }
-    if (inDx == -1 && inDy == 0 && outDx == 0 && outDy == 1) {       // W -> S
-        *angle = 90;
-        return;
-    }
-    if (inDx == 0 && inDy == -1 && outDx == -1 && outDy == 0) {      // N -> W
-        *angle = 180;
-        return;
-    }
-    if (inDx == 1 && inDy == 0 && outDx == 0 && outDy == -1) {       // E -> N
-        *angle = 270;
-        return;
-    }
+    if (inDx ==  1 && inDy ==  0 && outDx ==  0 && outDy ==  1) { *angle =   0; return; } // S->E
+    if (inDx ==  0 && inDy ==  1 && outDx == -1 && outDy ==  0) { *angle =  90; return; } // W->S
+    if (inDx == -1 && inDy ==  0 && outDx ==  0 && outDy == -1) { *angle = 180; return; } // N->W
+    if (inDx ==  0 && inDy == -1 && outDx ==  1 && outDy ==  0) { *angle = 270; return; } // E->N
 
-    // Left turns (mirror the sprite)
     *scale = -1;
 
-    if (inDx == 0 && inDy == 1 && outDx == -1 && outDy == 0) {       // S -> W
-        *angle = 0;
-        return;
-    }
-    if (inDx == -1 && inDy == 0 && outDx == 0 && outDy == -1) {      // W -> N
-        *angle = 90;
-        return;
-    }
-    if (inDx == 0 && inDy == -1 && outDx == 1 && outDy == 0) {       // N -> E
-        *angle = 180;
-        return;
-    }
-    if (inDx == 1 && inDy == 0 && outDx == 0 && outDy == 1) {        // E -> S
-        *angle = 270;
-        return;
-    }
+    if (inDx ==  1 && inDy ==  0 && outDx ==  0 && outDy == -1) { *angle =   0; return; } // S->W
+    if (inDx ==  0 && inDy ==  1 && outDx ==  1 && outDy ==  0) { *angle =  90; return; } // E->S
+    if (inDx == -1 && inDy ==  0 && outDx ==  0 && outDy ==  1) { *angle = 180; return; } // N->E
+    if (inDx ==  0 && inDy == -1 && outDx == -1 && outDy ==  0) { *angle = 270; return; } // W->N
 
     *angle = 0;
     *scale = 1;
@@ -210,45 +136,30 @@ void conveyor_refresh(Machine* machine, struct Map* map)
     int inDy = 0;
     int hasTurnInput = 0;
 
-    if (!conveyor_select_output(machine, map, &outDx, &outDy)) {
-        conveyor_direction(machine->rotation, &outDx, &outDy);
-    }
+    conveyor_direction(machine->rotation, &outDx, &outDy);
 
     ConveyorData* data = machine->data;
     data->destinationX = machine->X + outDx;
     data->destinationY = machine->Y + outDy;
 
-    Machine* previous = NULL;
-    int prevOutDx = 0;
-    int prevOutDy = 0;
+    Machine* candidates[2];
+    candidates[0] = machine_get_relative_to(machine, map, MACHINE_POSITION_RIGHT);
+    candidates[1] = machine_get_relative_to(machine, map, MACHINE_POSITION_LEFT);
 
-    for (int dy = -1; dy <= 1 && !previous; ++dy) {
-        for (int dx = -1; dx <= 1; ++dx) {
-            if ((dx == 0 && dy == 0) || (dx != 0 && dy != 0))
-                continue;
+    for(int i = 0; i < 2; i++){
+        Machine* candidate = candidates[i];
 
-            Machine* neighbor = map_get_machine(map, machine->X + dx, machine->Y + dy);
-            if (!is_conveyor(neighbor))
-                continue;
-
-            int dummyDx, dummyDy;
-            if (!conveyor_outputs_to(neighbor, machine->X, machine->Y, &dummyDx, &dummyDy))
-                continue;
-
-            previous = neighbor;
-
-            if (!conveyor_select_output(previous, map, &prevOutDx, &prevOutDy))
-                conveyor_direction(previous->rotation, &prevOutDx, &prevOutDy);
-            break;
+        if(is_conveyor(candidate)){
+            int neighborDx = 0, neighborDy = 0;
+            if (conveyor_outputs_to(candidate, machine->X, machine->Y, &neighborDx, &neighborDy)){
+                if(outDx * neighborDx + outDy * neighborDy == 0){
+                    inDx = -neighborDx;
+                    inDy = -neighborDy;
+                    hasTurnInput = 1;
+                    break;
+                }
+            }
         }
-    }
-
-    int hasOutput = is_conveyor(map_get_machine(map, machine->X + outDx, machine->Y + outDy));
-    if (previous && hasOutput && (prevOutDx != outDx || prevOutDy != outDy))
-    {
-        inDx = -prevOutDx;
-        inDy = -prevOutDy;
-        hasTurnInput = 1;
     }
 
     if (hasTurnInput) {
@@ -261,7 +172,7 @@ void conveyor_refresh(Machine* machine, struct Map* map)
 
         Tile* tile = get_tile(map, machine->X, machine->Y, ZINDEX_OVERLAY);
         if (tile && tile->Entity) {
-            tile->Entity->angle = angle;
+            tile->Entity->angle = angle + 90;
         }
     } else {
         machine_set_overlay_state(machine, map, OVERLAY_CONVEYOR_BELT_STRAIGHT);

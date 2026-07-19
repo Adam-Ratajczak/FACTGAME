@@ -25,6 +25,37 @@ static void ensure_visible_chunks(TextureManager* texmgr, Map* map, const Box* v
     }
 }
 
+static void ensure_player_position(TextureManager* texmgr, Map* map, Player* player)
+{
+    if (!texmgr || !map || !player)
+        return;
+
+    const int maxAttempts = 10000;
+
+    for (int i = 0; i < maxAttempts; i++) {
+        int tileX = (rand() % 512) - 256;
+        int tileY = (rand() % 512) - 256;
+
+        int worldX = tileX * TILE_SIZE;
+        int worldY = tileY * TILE_SIZE;
+
+        int chunkX = div_floor(worldX, CHUNK_SIZE * TILE_SIZE);
+        int chunkY = div_floor(worldY, CHUNK_SIZE * TILE_SIZE);
+
+        if (!get_chunk(map, chunkX, chunkY))
+            create_chunk(texmgr, map, chunkX, chunkY);
+
+        if (!player_position_blocked(map, worldX, worldY)) {
+            player->x = worldX;
+            player->y = worldY;
+            return;
+        }
+    }
+
+    player->x = 0;
+    player->y = 0;
+}
+
 BITMAP* back_buffer = NULL;
 void run_game(){
     back_buffer = create_bitmap(SCREEN_W, SCREEN_H);
@@ -57,8 +88,7 @@ void run_game(){
         log_debug("Failed to create map!\n");
         goto cleanup;
     }
-    player->x = TILE_SIZE / 2;
-    player->y = TILE_SIZE / 2;
+    ensure_player_position(texmgr, map, player);
     player_update(texmgr, player);
     ensure_visible_chunks(texmgr, map, &player->vp);
 

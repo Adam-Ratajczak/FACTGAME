@@ -137,17 +137,25 @@ void machine_update(Machine* machine, struct Map* map)
         machine->update(machine, map);
 }
 
+void machine_refresh(Machine* machine, struct Map* map){
+    if (machine && machine->refresh)
+        machine->refresh(machine, map);
+}
+
 void machine_refresh_near(Map* map, int x, int y)
 {
     if (!map)
         return;
 
+    Machine* machine = map_get_machine(map, x, y);
+    machine_refresh(machine, map);
+
     for (int dy = -1; dy <= 1; ++dy) {
         for (int dx = -1; dx <= 1; ++dx) {
-            Machine* machine = map_get_machine(map, x + dx, y + dy);
-
-            if (machine && machine->refresh)
-                machine->refresh(machine, map);
+            if ((dx == 0 && dy == 0) || (dx != 0 && dy != 0))
+                continue;
+            machine = map_get_machine(map, x + dx, y + dy);
+            machine_refresh(machine, map);
         }
     }
 }

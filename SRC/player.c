@@ -281,7 +281,7 @@ void player_update(TextureManager* texmgr, Player* player){
     player->vp.Top = player->y - SCREEN_H / 2.0;
 }
 
-static int player_position_blocked(Map* map, int x, int y)
+int player_position_blocked(Map* map, int x, int y)
 {
     const int corners[4][2] = {
         {-PLAYER_HITBOX_HALF_WIDTH, -PLAYER_HITBOX_HALF_HEIGHT},
@@ -356,7 +356,6 @@ void player_render(BITMAP* scr, Player* player){
     if(!player){
         return;
     }
-
 
     if(player->state == PLAYER_MINE){
         int sx = player->miningX * TILE_SIZE - player->vp.Left;
@@ -618,6 +617,8 @@ void player_pick_drop_items(ItemRegistry* itemReg, TextureManager* texmgr, Map* 
                 free(items);
             }
         }
+
+        player_select_hud_slot(itemReg, player, player->inventory->hud->selected);
     }
 }
 

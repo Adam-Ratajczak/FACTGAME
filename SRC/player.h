@@ -51,6 +51,8 @@ void player_update(TextureManager* texmgr, Player* player);
 void player_move(Map* map, Player* player, int dx, int dy);
 void player_render(BITMAP* scr, Player* player);
 
+int player_position_blocked(Map* map, int x, int y);
+
 void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int x, int y, int button, int shift);
 void player_mouse_move_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int x, int y);
 

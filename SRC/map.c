@@ -142,9 +142,7 @@ Map* create_map(){
     map->machineCount = 0;
     map->machines = NULL;
     map->frame = 0;
-    do {
-        map->seed_height = rand();
-    } while ((perlin2d(0, 0, 0.003f, 4, map->seed_height) + 1.0f) * 0.5f < 0.30f);
+    map->seed_height = rand();
     map->seed_humidity = rand();
     map->seed_ore = rand();
 

@@ -266,7 +266,64 @@ static int hud_slot_accepts_item(const Slot* slot, const Item* item)
     }
 }
 
-static int inventory_pick_crafted_item(Inventory* inventory, Item* item)
+static int inventory_pick_item_no_hud(Inventory* inventory, Item* item)
+{
+    if (!inventory || !item)
+        return 0;
+
+    if (item_is_stackable(item))
+    {
+        for (int i = 0; i < INVENTORY_COLS * INVENTORY_ROWS; ++i)
+        {
+            Slot* slot = inventory->slots[i];
+
+            if (!slot || !slot->item)
+                continue;
+
+            if (slot->item->itemId != item->itemId)
+                continue;
+
+            if (slot->item->amount >= ITEM_STACK_SIZE)
+                continue;
+
+            int freeSpace = ITEM_STACK_SIZE - slot->item->amount;
+
+            if (item->amount <= freeSpace)
+            {
+                slot->item->amount += item->amount;
+                item_destroy(item);
+                return 1;
+            }
+
+            slot->item->amount = ITEM_STACK_SIZE;
+            item->amount -= freeSpace;
+        }
+    }
+
+    for (int i = 0; i < INVENTORY_COLS * INVENTORY_ROWS; ++i)
+    {
+        Slot* slot = inventory->slots[i];
+
+        if (!slot || slot->item)
+            continue;
+
+        if (!item_is_stackable(item))
+        {
+            if (item->amount != 1)
+                return 0;
+
+            slot_set_item(slot, item);
+            return 1;
+        }
+
+        slot_set_item(slot, item);
+        return 1;
+    }
+
+    return 0;
+}
+
+int inventory_pick_item(Inventory* inventory, Item* item)
 {
     if (!inventory || !item)
         return 0;
@@ -301,11 +358,16 @@ static int inventory_pick_crafted_item(Inventory* inventory, Item* item)
         if (!item_is_stackable(item) && item->amount != 1)
             return 0;
 
+        int needsRescaling = (slot->sprite->scale > 1.0);
+        if(needsRescaling)
+            slot_scale_down(slot);
         slot_set_item(slot, item);
+        if(needsRescaling)
+            slot_scale_up(slot);
         return 1;
     }
 
-    return inventory_pick_item(inventory, item);
+    return inventory_pick_item_no_hud(inventory, item);
 }
 
 static int inventory_craft_item(ItemRegistry* itemReg, Inventory* inventory, int itemId, int all)
@@ -318,7 +380,7 @@ static int inventory_craft_item(ItemRegistry* itemReg, Inventory* inventory, int
         Item* crafted = item_create(itemReg, inventory->texmgr, itemId, all ? ITEM_STACK_SIZE : 1);
         if(!crafted)
             return 0;
-        if(!inventory_pick_crafted_item(inventory, crafted)){
+        if(!inventory_pick_item(inventory, crafted)){
             item_destroy(crafted);
             return 0;
         }
@@ -331,7 +393,7 @@ static int inventory_craft_item(ItemRegistry* itemReg, Inventory* inventory, int
         if(!crafted)
             break;
 
-        if(!inventory_pick_crafted_item(inventory, crafted)){
+        if(!inventory_pick_item(inventory, crafted)){
             item_destroy(crafted);
             break;
         }
@@ -683,63 +745,6 @@ Slot* inventory_get_selected_slot(Inventory* inventory){
     }
 
     return inventory->hud->slots[slotIndex];
-}
-
-int inventory_pick_item(Inventory* inventory, Item* item)
-{
-    if (!inventory || !item)
-        return 0;
-
-    if (item_is_stackable(item))
-    {
-        for (int i = 0; i < INVENTORY_COLS * INVENTORY_ROWS; ++i)
-        {
-            Slot* slot = inventory->slots[i];
-
-            if (!slot || !slot->item)
-                continue;
-
-            if (slot->item->itemId != item->itemId)
-                continue;
-
-            if (slot->item->amount >= ITEM_STACK_SIZE)
-                continue;
-
-            int freeSpace = ITEM_STACK_SIZE - slot->item->amount;
-
-            if (item->amount <= freeSpace)
-            {
-                slot->item->amount += item->amount;
-                item_destroy(item);
-                return 1;
-            }
-
-            slot->item->amount = ITEM_STACK_SIZE;
-            item->amount -= freeSpace;
-        }
-    }
-
-    for (int i = 0; i < INVENTORY_COLS * INVENTORY_ROWS; ++i)
-    {
-        Slot* slot = inventory->slots[i];
-
-        if (!slot || slot->item)
-            continue;
-
-        if (!item_is_stackable(item))
-        {
-            if (item->amount != 1)
-                return 0;
-
-            slot_set_item(slot, item);
-            return 1;
-        }
-
-        slot_set_item(slot, item);
-        return 1;
-    }
-
-    return 0;
 }
 
 Slot* inventory_get_slot_from_coords(Inventory* inventory, int x, int y){
