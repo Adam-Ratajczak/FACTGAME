@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "log.h"
 #include "utils.h"
+#include "conveyor.h"
 #include "zlib.h"
 #include "perlin.h"
 #include "alwrap.h"
@@ -770,6 +771,50 @@ int map_place_machine(TextureManager* texmgr, ItemRegistry* itemReg, Map* map, i
     map->machines[map->machineCount++] = machine;
     set_tile(map, tile, x, y, ZINDEX_OVERLAY);
     machine_refresh_near(map, x, y);
+
+    return 1;
+}
+
+int map_place_tunnel(TextureManager* texmgr, ItemRegistry* itemReg, Map* map, int x1, int y1, int x2, int y2, int rotation){
+    if (!texmgr || !itemReg || !map || !map_can_place_machine(map, x1, y1) || !map_can_place_machine(map, x2, y2))
+        return 0;
+
+    if (!get_chunk(map, div_floor(x1, CHUNK_SIZE), div_floor(y1, CHUNK_SIZE)) || !get_chunk(map, div_floor(x2, CHUNK_SIZE), div_floor(y2, CHUNK_SIZE)))
+        return 0;
+
+    Machine* machine = conveyor_tunnel_create(texmgr, itemReg, x1, y1, x2, y2, rotation);
+    if (!machine)
+        return 0;
+
+    Tile* tile1 = create_tile(texmgr, machine_get_tile_id(OVERLAY_CONVEYOR_TUNNEL_IN));
+    if (!tile1) {
+        machine_destroy(machine);
+        return 0;
+    }
+    tile1->Entity->angle = rotation;
+
+    Tile* tile2 = create_tile(texmgr, machine_get_tile_id(OVERLAY_CONVEYOR_TUNNEL_OUT));
+    if (!tile2) {
+        destroy_tile(tile1);
+        machine_destroy(machine);
+        return 0;
+    }
+    tile2->Entity->angle = rotation;
+
+    Machine** grown = realloc(map->machines, (map->machineCount + 1) * sizeof(*map->machines));
+    if (!grown) {
+        destroy_tile(tile2);
+        destroy_tile(tile1);
+        machine_destroy(machine);
+        return 0;
+    }
+
+    map->machines = grown;
+    map->machines[map->machineCount++] = machine;
+    set_tile(map, tile1, x1, y1, ZINDEX_OVERLAY);
+    set_tile(map, tile2, x2, y2, ZINDEX_OVERLAY);
+    machine_refresh_near(map, x1, y1);
+    machine_refresh_near(map, x2, y2);
 
     return 1;
 }

@@ -23,7 +23,8 @@
 #define ITEM_CIRCUIT        0x0011
 #define ITEM_STONE_BRICK    0x0012
 #define ITEM_SPLITTER       0x0013
-#define ITEM_COUNT          0x0014
+#define ITEM_TUNNEL         0x0014
+#define ITEM_COUNT          0x0015
 
 #define ITEM_FUNCTION_WEAPON 0x0
 #define ITEM_FUNCTION_TOOL 0x1

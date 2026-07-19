@@ -28,9 +28,12 @@ typedef struct
 
     Inventory* inventory;
     Entity* machinePreview;
+    Entity* machinePreviewSecondary;
     int machinePreviewOverlayId;
     int machinePreviewCanPlace;
+    int machinePreviewSecondaryCanPlace;
     int machinePreviewRotation;
+    int machinePreviewStep;
 
     int miningX;
     int miningY;

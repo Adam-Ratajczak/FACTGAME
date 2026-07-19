@@ -131,6 +131,9 @@ static int get_overlay_def(int id, int* left, int* top)
 
     case OVERLAY_CHEST:                  *left = 48; *top = 48; break;
 
+    case OVERLAY_CONVEYOR_TUNNEL_IN:     *left = 64; *top = 0; break;
+    case OVERLAY_CONVEYOR_TUNNEL_OUT:    *left = 64; *top = 16; break;
+
     default:
         return 0;
     }

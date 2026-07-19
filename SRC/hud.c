@@ -184,7 +184,10 @@ static void inventory_update_crafting(ItemRegistry* itemReg, Inventory* inventor
     inventory_clear_crafting(inventory);
 
     for(int itemId = 0; itemId < ITEM_COUNT && slotIndex < INVENTORY_COLS * CRAFTING_ROWS; ++itemId){
-        if(!inventory->cheatMode && !inventory_can_craft(itemReg, inventory, itemId))
+        if(inventory->cheatMode && itemReg->info[itemId].function != ITEM_FUNCTION_BLOCK){
+            continue;
+        }
+        else if(!inventory->cheatMode && !inventory_can_craft(itemReg, inventory, itemId))
             continue;
 
         Item* preview = item_create(itemReg, inventory->texmgr, itemId, 1);

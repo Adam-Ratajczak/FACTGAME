@@ -15,4 +15,6 @@ void splitter_update(Machine* machine, struct Map* map);
 void splitter_refresh(Machine* machine, struct Map* map);
 void* splitter_get_data(TextureManager* texmgr);
 
+Machine* conveyor_tunnel_create(TextureManager* texmgr, ItemRegistry* itemReg, int x1, int y1, int x2, int y2, int rotation);
+
 #endif

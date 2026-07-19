@@ -10,3 +10,12 @@ int mod_floor(int a, int b) {
     int r = a % b;
     return (r < 0) ? (r + b) : r;
 }
+
+int normalize_rotation(int rotation)
+{
+    rotation %= 360;
+    if (rotation < 0)
+        rotation += 360;
+
+    return rotation;
+}

@@ -258,6 +258,18 @@ ItemRegistry* item_registry_create(void)
             ITEM_IRON, 2,
             -1);
 
+    strcpy(reg->info[ITEM_TUNNEL].name, "Tunnel");
+    reg->info[ITEM_TUNNEL].maxDurability = 0;
+    reg->info[ITEM_TUNNEL].function = ITEM_FUNCTION_BLOCK;
+    reg->info[ITEM_TUNNEL].aquiredFrom = OVERLAY_CONVEYOR_TUNNEL;
+    reg->info[ITEM_TUNNEL].placedAs = OVERLAY_CONVEYOR_TUNNEL;
+    reg->info[ITEM_TUNNEL].smelting = 0;
+    reg->info[ITEM_TUNNEL].recipe =
+        item_recipe_create(
+            ITEM_CONVEYOR_BELT, 2,
+            ITEM_IRON, 3,
+            -1);
+
     return reg;
 }
 

@@ -5,6 +5,7 @@
 #include "conveyor.h"
 #include "crafters.h"
 #include "map.h"
+#include "utils.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -57,6 +58,8 @@ Machine* machine_create(TextureManager* texmgr, ItemRegistry* itemReg, int x, in
     machine->itemReg = itemReg;
     machine->inventory = NULL;
     machine->data = NULL;
+    machine->update = NULL;
+    machine->refresh = NULL;
 
     switch (overlayId) {
     case OVERLAY_CONVEYOR_BELT:
@@ -136,9 +139,6 @@ void machine_refresh_near(Map* map, int x, int y)
 
     for (int dy = -1; dy <= 1; ++dy) {
         for (int dx = -1; dx <= 1; ++dx) {
-            if (dx != 0 && dy != 0)
-                continue;
-
             Machine* machine = map_get_machine(map, x + dx, y + dy);
 
             if (machine && machine->refresh)
@@ -192,4 +192,23 @@ Machine* machine_get_relative_to(Machine* machine, struct Map* map, int posId)
     }
 
     return map_get_machine(map, machine->X + dx, machine->Y + dy);
+}
+
+void preview_direction(int rotation, int* dx, int* dy)
+{
+    switch (normalize_rotation(rotation))
+    {
+    case 90:
+        *dx = 1; *dy = 0;
+        break;
+    case 180:
+        *dx = 0; *dy = -1;
+        break;
+    case 270:
+        *dx = -1; *dy = 0;
+        break;
+    default:
+        *dx = 0; *dy = 1;
+        break;
+    }
 }

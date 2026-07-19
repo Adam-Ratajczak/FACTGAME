@@ -104,6 +104,8 @@ Help* help_create()
     help_page_add_line(page, "Splitter");
     help_page_add_line(page, "  2 Conveyor + 2 Gear");
     help_page_add_line(page, "  + 2 Iron");
+    help_page_add_line(page, "Tunnel");
+    help_page_add_line(page, "  3 Conveyor + 2 Iron");
     help_page_add_line(page, "Chest");
     help_page_add_line(page, "  8 Stone Brick");
     help_page_add_line(page, "Furnace");

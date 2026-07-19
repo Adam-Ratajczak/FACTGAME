@@ -43,5 +43,6 @@ void machine_set_overlay_state(Machine* machine, struct Map* map, int tileId);
 #define MACHINE_POSITION_LEFT 3
 
 Machine* machine_get_relative_to(Machine* machine, struct Map* map, int posId);
+void preview_direction(int rotation, int* dx, int* dy);
 
 #endif

@@ -64,6 +64,7 @@ Item* map_take_dropped_item(ItemRegistry* itemReg, TextureManager* texmgr, Map* 
 Machine* map_get_machine(Map* map, int x, int y);
 int map_can_place_machine(Map* map, int x, int y);
 int map_place_machine(TextureManager* texmgr, ItemRegistry* itemReg, Map* map, int x, int y, int overlayId, int rotation);
+int map_place_tunnel(TextureManager* texmgr, ItemRegistry* itemReg, Map* map, int x1, int y1, int x2, int y2, int rotation);
 void map_remove_machine(Map* map, int x, int y);
 
 Chunk* get_chunk(Map* map, int chunkX, int chunkY);

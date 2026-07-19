@@ -37,6 +37,9 @@
 #define OVERLAY_SPLITTER_T                  0x1052
 #define OVERLAY_SPLITTER_I                  0x1053
 #define OVERLAY_CHEST                       0x1060
+#define OVERLAY_CONVEYOR_TUNNEL             0x1070
+#define OVERLAY_CONVEYOR_TUNNEL_IN          0x1071
+#define OVERLAY_CONVEYOR_TUNNEL_OUT         0x1072
 
 typedef struct {
     int TexID;

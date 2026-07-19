@@ -1,5 +1,6 @@
 #include "conveyor.h"
 #include "log.h"
+#include "utils.h"
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -14,20 +15,11 @@ typedef struct {
 
 int is_conveyor(Machine* machine)
 {
-    return machine && machine->overlayId == OVERLAY_CONVEYOR_BELT;
+    return machine && (machine->overlayId == OVERLAY_CONVEYOR_BELT || machine->overlayId == OVERLAY_CONVEYOR_TUNNEL);
 }
 
 int is_splitter(Machine* machine){
     return machine && machine->overlayId == OVERLAY_SPLITTER;
-}
-
-static int normalize_rotation(int rotation)
-{
-    rotation %= 360;
-    if (rotation < 0)
-        rotation += 360;
-
-    return rotation;
 }
 
 static void conveyor_direction(int rotation, int* dx, int* dy)
@@ -279,8 +271,6 @@ void conveyor_update(Machine* machine, struct Map* map)
 
     if (elapsedMs > 1000)
         elapsedMs = 1000;
-
-    conveyor_refresh(machine, map);
 
     if (map->frame % CONVEYOR_MOVE_TICKS != 0)
         return;
@@ -635,4 +625,34 @@ void splitter_update(Machine* machine, struct Map* map)
             }
         }
     }
+}
+
+Machine* conveyor_tunnel_create(TextureManager* texmgr, ItemRegistry* itemReg, int x1, int y1, int x2, int y2, int rotation){
+    Machine* machine = calloc(1, sizeof(*machine));
+    if (!machine)
+        return NULL;
+
+    machine->X = x1;
+    machine->Y = y1;
+    machine->rotation = rotation;
+    machine->overlayId = OVERLAY_CONVEYOR_TUNNEL;
+    machine->texmgr = texmgr;
+    machine->itemReg = itemReg;
+    machine->inventory = NULL;
+    machine->update = conveyor_update;
+    machine->refresh = NULL;
+
+    ConveyorData* data = malloc(sizeof(*data));
+    if (!data){
+        free(machine);
+        return NULL;
+    }
+
+    int dx = 0, dy = 0;
+    preview_direction(rotation, &dx, &dy);
+    data->destinationX = x2 + dx;
+    data->destinationY = y2 + dy;
+    machine->data = data;
+
+    return machine;
 }
