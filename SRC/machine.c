@@ -39,9 +39,14 @@ void machine_set_overlay_state(Machine* machine, struct Map* map, int tileId)
     if (!get_tile_def(tileId, &texLeft, &texTop))
         return;
 
-    tile->TexID = tileId;
-    tile->Entity->sx = texLeft;
-    tile->Entity->sy = texTop;
+    if (tile->TexID != tileId ||
+        tile->Entity->sx != texLeft ||
+        tile->Entity->sy != texTop) {
+        tile->TexID = tileId;
+        tile->Entity->sx = texLeft;
+        tile->Entity->sy = texTop;
+        map_invalidate_tile(map, machine->X, machine->Y);
+    }
 }
 
 Machine* machine_create(TextureManager* texmgr, ItemRegistry* itemReg, int x, int y, int rotation, int overlayId)

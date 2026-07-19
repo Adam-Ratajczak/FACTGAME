@@ -18,6 +18,10 @@ typedef struct {
     int Y;
 
     Tile** Tiles[MAX_ZINDEX];
+
+    BITMAP* renderCache;
+    unsigned long renderRevision;
+    unsigned long cachedRenderRevision;
 } Chunk;
 
 typedef struct{
@@ -48,6 +52,7 @@ typedef struct Map {
 
 Tile* get_tile(Map* map, int X, int Y, int zIndex);
 void set_tile(Map* map, Tile* tile, int X, int Y, int zIndex);
+void map_invalidate_tile(Map* map, int X, int Y);
 
 Map* create_map();
 void render_map(BITMAP* scr, Map* map, Box* vp);

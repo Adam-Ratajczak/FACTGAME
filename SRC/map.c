@@ -111,6 +111,21 @@ void set_tile(Map* map, Tile* tile, int X, int Y, int zIndex){
         tile->Entity->y = Y * TILE_SIZE;
     }
     chunk->Tiles[zIndex][idx] = tile;
+    map_invalidate_tile(map, X, Y);
+}
+
+void map_invalidate_tile(Map* map, int X, int Y)
+{
+    if (!map)
+        return;
+
+    Chunk* chunk = get_chunk(map, div_floor(X, CHUNK_SIZE), div_floor(Y, CHUNK_SIZE));
+    if (!chunk)
+        return;
+
+    chunk->renderRevision++;
+    if (chunk->renderRevision == 0)
+        chunk->renderRevision = 1;
 }
 
 Map* create_map(){
@@ -131,7 +146,7 @@ Map* create_map(){
     return map;
 }
 
-static void render_chunk(BITMAP* scr, Chunk* chunk, Box* vp)
+static void render_chunk_uncached(BITMAP* scr, Chunk* chunk, const Box* vp)
 {
     if (!chunk)
         return;
@@ -147,6 +162,52 @@ static void render_chunk(BITMAP* scr, Chunk* chunk, Box* vp)
             render_entity(scr, chunk->Tiles[j][k]->Entity, vp);
         }
     }
+}
+
+static int rebuild_chunk_render_cache(Chunk* chunk)
+{
+    const int chunkPixels = CHUNK_SIZE * TILE_SIZE;
+
+    if (!chunk->renderCache) {
+        chunk->renderCache = create_bitmap(chunkPixels, chunkPixels);
+        if (!chunk->renderCache)
+            return 0;
+    }
+
+    clear_to_color(chunk->renderCache, chunk->renderCache->vtable->mask_color);
+
+    Box chunkViewport = {
+        chunk->X * chunkPixels,
+        chunk->Y * chunkPixels,
+        chunkPixels,
+        chunkPixels
+    };
+    render_chunk_uncached(chunk->renderCache, chunk, &chunkViewport);
+    chunk->cachedRenderRevision = chunk->renderRevision;
+    return 1;
+}
+
+static void render_chunk(BITMAP* scr, Chunk* chunk, const Box* vp)
+{
+    if (!chunk)
+        return;
+
+    const int chunkPixels = CHUNK_SIZE * TILE_SIZE;
+    if ((!chunk->renderCache || chunk->cachedRenderRevision != chunk->renderRevision) &&
+        !rebuild_chunk_render_cache(chunk)) {
+        render_chunk_uncached(scr, chunk, vp);
+        return;
+    }
+
+    masked_blit(
+        chunk->renderCache,
+        scr,
+        0,
+        0,
+        chunk->X * chunkPixels - vp->Left,
+        chunk->Y * chunkPixels - vp->Top,
+        chunkPixels,
+        chunkPixels);
 }
 
 void render_map(BITMAP* scr, Map* map, Box* vp){
@@ -189,6 +250,8 @@ void destroy_map(Map* map){
             }
             free(map->Chunks[i]->Tiles[j]);
         }
+        if (map->Chunks[i]->renderCache)
+            destroy_bitmap(map->Chunks[i]->renderCache);
         free(map->Chunks[i]);
     }
     free(map->Chunks);

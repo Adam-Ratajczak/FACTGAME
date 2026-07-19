@@ -242,13 +242,18 @@ void conveyor_refresh(Machine* machine, struct Map* map)
 
         Tile* tile = get_tile(map, machine->X, machine->Y, ZINDEX_OVERLAY);
         if (tile && tile->Entity) {
-            tile->Entity->angle = angle;
+            if (tile->Entity->angle != angle) {
+                tile->Entity->angle = angle;
+                map_invalidate_tile(map, machine->X, machine->Y);
+            }
         }
     } else {
         machine_set_overlay_state(machine, map, OVERLAY_CONVEYOR_BELT_STRAIGHT);
         Tile* tile = get_tile(map, machine->X, machine->Y, ZINDEX_OVERLAY);
-        if (tile && tile->Entity)
+        if (tile && tile->Entity && tile->Entity->angle != machine->rotation) {
             tile->Entity->angle = machine->rotation;
+            map_invalidate_tile(map, machine->X, machine->Y);
+        }
     }
 }
 
@@ -524,8 +529,10 @@ void splitter_refresh(Machine* machine, struct Map* map)
     machine_set_overlay_state(machine, map, overlay);
 
     Tile* tile = get_tile(map, machine->X, machine->Y, ZINDEX_OVERLAY);
-    if (tile && tile->Entity)
+    if (tile && tile->Entity && tile->Entity->angle != angle) {
         tile->Entity->angle = angle;
+        map_invalidate_tile(map, machine->X, machine->Y);
+    }
 }
 
 void splitter_update(Machine* machine, struct Map* map)
