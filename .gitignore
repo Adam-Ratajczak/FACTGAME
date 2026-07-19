@@ -4,4 +4,4 @@
 BUILD/
 INT/
 .vscode/
-.CONF/
+CONF/

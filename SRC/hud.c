@@ -141,6 +141,13 @@ static int inventory_count_item(Inventory* inventory, int itemId)
             count += slot->item->amount;
     }
 
+    for (int i = 0; i < INVENTORY_COLS; ++i) {
+        Slot* slot = inventory->hud->slots[i];
+
+        if (slot && slot->item && slot->item->itemId == itemId)
+            count += slot->item->amount;
+    }
+
     return count;
 }
 
@@ -223,45 +230,124 @@ static int inventory_consume_item(Inventory* inventory, int itemId, int amount)
         }
     }
 
+    for (int i = 0; i < INVENTORY_COLS && amount > 0; ++i) {
+        Slot* slot = inventory->hud->slots[i];
+
+        if (!slot || !slot->item || slot->item->itemId != itemId)
+            continue;
+
+        if (slot->item->amount > amount) {
+            slot->item->amount -= amount;
+            amount = 0;
+        } else {
+            amount -= slot->item->amount;
+            item_destroy(slot->item);
+            slot_set_item(slot, NULL);
+        }
+    }
+
     return amount == 0;
 }
 
-static int inventory_craft_item(ItemRegistry* itemReg, Inventory* inventory, int itemId)
+static int hud_slot_accepts_item(const Slot* slot, const Item* item)
+{
+    if (!slot || !item)
+        return 0;
+
+    switch (slot->purpose) {
+    case HUD_SLOT_PURPOSE_ATTACK:
+        return item->function == ITEM_FUNCTION_WEAPON;
+    case HUD_SLOT_PURPOSE_MINE:
+        return item->function == ITEM_FUNCTION_TOOL;
+    case HUD_SLOT_PURPOSE_BUILD:
+        return item->function == ITEM_FUNCTION_BLOCK;
+    default:
+        return 0;
+    }
+}
+
+static int inventory_pick_crafted_item(Inventory* inventory, Item* item)
+{
+    if (!inventory || !item)
+        return 0;
+
+    if (item_is_stackable(item)) {
+        for (int i = 0; i < INVENTORY_COLS; ++i) {
+            Slot* slot = inventory->hud->slots[i];
+
+            if (!hud_slot_accepts_item(slot, item) || !slot->item ||
+                slot->item->itemId != item->itemId ||
+                slot->item->amount >= ITEM_STACK_SIZE)
+                continue;
+
+            int freeSpace = ITEM_STACK_SIZE - slot->item->amount;
+            if (item->amount <= freeSpace) {
+                slot->item->amount += item->amount;
+                item_destroy(item);
+                return 1;
+            }
+
+            slot->item->amount = ITEM_STACK_SIZE;
+            item->amount -= freeSpace;
+        }
+    }
+
+    for (int i = 0; i < INVENTORY_COLS; ++i) {
+        Slot* slot = inventory->hud->slots[i];
+
+        if (!hud_slot_accepts_item(slot, item) || slot->item)
+            continue;
+
+        if (!item_is_stackable(item) && item->amount != 1)
+            return 0;
+
+        slot_set_item(slot, item);
+        return 1;
+    }
+
+    return inventory_pick_item(inventory, item);
+}
+
+static int inventory_craft_item(ItemRegistry* itemReg, Inventory* inventory, int itemId, int all)
 {
     if(!itemReg || !inventory){
         return;
     }
 
     if(inventory->cheatMode){
-        Item* crafted = item_create(itemReg, inventory->texmgr, itemId, 1);
+        Item* crafted = item_create(itemReg, inventory->texmgr, itemId, all ? ITEM_STACK_SIZE : 1);
         if(!crafted)
             return 0;
-        if(!inventory_pick_item(inventory, crafted)){
+        if(!inventory_pick_crafted_item(inventory, crafted)){
             item_destroy(crafted);
             return 0;
         }
         return 1;
     }
 
-    if(!inventory_can_craft(itemReg, inventory, itemId))
-        return 0;
+    int craftingSuccess = 0;
+    while(inventory_can_craft(itemReg, inventory, itemId)){
+        Item* crafted = item_create(itemReg, inventory->texmgr, itemId, 1);
+        if(!crafted)
+            break;
 
-    Item* crafted = item_create(itemReg, inventory->texmgr, itemId, 1);
-    if(!crafted)
-        return 0;
+        if(!inventory_pick_crafted_item(inventory, crafted)){
+            item_destroy(crafted);
+            break;
+        }
 
-    if(!inventory_pick_item(inventory, crafted)){
-        item_destroy(crafted);
-        return 0;
+        ItemRecipe* recipe = itemReg->info[itemId].recipe;
+        for(int i = 0; i < recipe->requiresCount; ++i){
+            ItemRecipeRequirement* requirement = &recipe->requires[i];
+            inventory_consume_item(inventory, requirement->itemId, requirement->amount);
+        }
+        craftingSuccess = 1;
+        if(!all){
+            break;
+        }
     }
 
-    ItemRecipe* recipe = itemReg->info[itemId].recipe;
-    for(int i = 0; i < recipe->requiresCount; ++i){
-        ItemRecipeRequirement* requirement = &recipe->requires[i];
-        inventory_consume_item(inventory, requirement->itemId, requirement->amount);
-    }
-
-    return 1;
+    return craftingSuccess;
 }
 
 void inventory_show(ItemRegistry* itemReg, Inventory* inventory, MachineInventory* machineInventory){
@@ -498,15 +584,6 @@ static void inventory_render_uncached(BITMAP* scr, Inventory* inventory)
             int x = SCREEN_W / 2;
             int y = (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS + 1) * SLOT_SIZE) / 2 - 12;
 
-            textout_centre_ex(
-                scr,
-                font,
-                inventory->machineInventory->name,
-                x,
-                y,
-                makecol(255, 255, 255),
-                makecol(0, 0, 0));
-
             for(int i = 0; i < inventory->machineInventory->slotsCount; ++i) {
                 slot_render(scr, inventory->machineInventory->slots[i]);
             }
@@ -567,12 +644,26 @@ void inventory_render(BITMAP* scr, Inventory* inventory){
     if (!inventory->shown && inventory->hud->selectedInfo)
     {
         int x = SCREEN_W / 2;
-        int y = (CRAFTING_ROWS + INVENTORY_ROWS + 1) * SLOT_SIZE - text_height(font) - 8;
+        int y = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE - text_height(font) - 8;
 
         textout_centre_ex(
             scr,
             font,
             inventory->hud->selectedInfo->name,
+            x,
+            y,
+            makecol(255, 255, 255),
+            -1
+        );
+    }
+
+    if(inventory->shown && inventory->machineInventory){
+        int x = SCREEN_W / 2;
+        int y = 4;
+        textout_centre_ex(
+            scr,
+            font,
+            inventory->machineInventory->name,
             x,
             y,
             makecol(255, 255, 255),
@@ -619,6 +710,7 @@ int inventory_pick_item(Inventory* inventory, Item* item)
             if (item->amount <= freeSpace)
             {
                 slot->item->amount += item->amount;
+                item_destroy(item);
                 return 1;
             }
 
@@ -705,7 +797,7 @@ void inventory_hover(ItemRegistry* itemReg, Inventory* inventory, int x, int y){
     inventory->hoveredInfo = &itemReg->info[slot->item->itemId];
 }
 
-void inventory_click(ItemRegistry* itemReg, Inventory* inventory, int x, int y)
+void inventory_click(ItemRegistry* itemReg, Inventory* inventory, int x, int y, int shift)
 {
     if (!inventory)
         return;
@@ -769,7 +861,7 @@ void inventory_click(ItemRegistry* itemReg, Inventory* inventory, int x, int y)
         }else{
             for(int i = 0; i < INVENTORY_COLS * CRAFTING_ROWS; ++i){
                 if(slot == inventory->crafting[i] && inventory->craftingItemIds[i] >= 0){
-                    if(inventory_craft_item(itemReg, inventory, inventory->craftingItemIds[i])){
+                    if(inventory_craft_item(itemReg, inventory, inventory->craftingItemIds[i], shift)){
                         inventory_update_crafting(itemReg, inventory);
                         inventory->renderSignature = 0;
                     }

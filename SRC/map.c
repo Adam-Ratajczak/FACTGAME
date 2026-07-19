@@ -215,9 +215,6 @@ void render_map(BITMAP* scr, Map* map, Box* vp){
         return;
     }
 
-    /* Only visible chunks benefit from retaining a pixel cache. Releasing
-       hidden caches keeps long-distance exploration from exhausting bitmap
-       or host graphics resources. */
     for (int i = 0; i < map->chunkCount; ++i) {
         Chunk* chunk = map->Chunks[i];
         if (chunk->renderCache && !is_chunk_in_vp(chunk, vp)) {
@@ -245,8 +242,6 @@ void render_dropped_items(BITMAP* scr, Map* map, Box* vp)
     if (!scr || !map || !vp)
         return;
 
-    /* Dropped items are dynamic world objects. Keep them entirely outside
-       chunk pixel caches so movement and item changes appear immediately. */
     for(int i = 0; i < map->droppedItemCount; i++){
         for(int j = 0; j < map->droppedIems[i]->itemCount; j++){
             item_render(scr, map->droppedIems[i]->items[j], vp);

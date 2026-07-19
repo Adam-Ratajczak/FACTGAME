@@ -535,7 +535,6 @@ void splitter_refresh(Machine* machine, struct Map* map)
     {
         overlay = OVERLAY_SPLITTER_T;
 
-        /* Base T sprite is open north, east and south (closed west). */
         if (!data->connected[MACHINE_POSITION_LEFT])
             angle = 0;
         else if (!data->connected[MACHINE_POSITION_TOP])

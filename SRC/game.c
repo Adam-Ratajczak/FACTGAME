@@ -134,7 +134,7 @@ void run_game(){
 
             if (mouse_b != prev_mouse_b)
             {
-                player_mouse_action(itemReg, texmgr, map, player, mouse_x, mouse_y, mouse_b);
+                player_mouse_action(itemReg, texmgr, map, player, mouse_x, mouse_y, mouse_b, key[KEY_LSHIFT]);
                 prev_mouse_b = mouse_b;
             }
 
@@ -155,7 +155,7 @@ void run_game(){
             player_render(back_buffer, player);
 
             help_render(back_buffer, help);
-            if (!opened_help)
+            if (!opened_help && !player->inventory->shown)
             {
                 textout_centre_ex(
                     back_buffer,

@@ -145,7 +145,7 @@ MachineInventory* mine_create_inventory(TextureManager* texmgr){
     if(!machineInventory)
         return NULL;
 
-    strcpy(machineInventory->name, "Mine");
+    strcpy(machineInventory->name, "Mining drill");
     machineInventory->slots = NULL;
     machineInventory->slotsCount = 0;
 
@@ -155,13 +155,11 @@ MachineInventory* mine_create_inventory(TextureManager* texmgr){
         return NULL;
     }
 
-    int x = (SCREEN_W - INVENTORY_COLS * SLOT_SIZE) / 2;
-    int y = (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS + 1) * SLOT_SIZE) / 2;
     machineInventory->slots[0] = slot_create(
         texmgr,
         HUD_SLOT_PURPOSE_CRAFT,
-        x - SLOT_SIZE / 2,
-        y + SLOT_SIZE / 2,
+        (SCREEN_W - SLOT_SIZE) / 2,
+        (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS + 1) * SLOT_SIZE) / 2,
         NULL);
 
     machineInventory->slotsCount = 1;

@@ -89,8 +89,7 @@ MachineInventory* chest_create_inventory(TextureManager* texmgr){
         return NULL;
     }
 
-    int invHeight = (CHEST_INVENTORY_ROWS + INVENTORY_COLS) * SLOT_SIZE;
-    int y = (SCREEN_H - invHeight) / 2;
+    int y = (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS + 1) * SLOT_SIZE) / 2;
     for(int i = 0; i < CHEST_INVENTORY_ROWS; ++i){
         int x = (SCREEN_W - INVENTORY_COLS * SLOT_SIZE) / 2;
         for(int j = 0; j < INVENTORY_COLS; ++j){

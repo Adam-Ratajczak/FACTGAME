@@ -49,7 +49,7 @@ void player_update(TextureManager* texmgr, Player* player);
 void player_move(Player* player, int dx, int dy);
 void player_render(BITMAP* scr, Player* player);
 
-void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int x, int y, int button);
+void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int x, int y, int button, int shift);
 void player_mouse_move_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int x, int y);
 
 void player_get_texcoords(int state, int walkingState, int* left, int* top);

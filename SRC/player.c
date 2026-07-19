@@ -156,6 +156,27 @@ static void player_consume_selected_item(Player* player, Slot* slot)
     }
 }
 
+static void player_damage_mining_tool(Player* player)
+{
+    if (!player || !player->inventory)
+        return;
+
+    Slot* slot = inventory_get_selected_slot(player->inventory);
+    if (!slot || slot->purpose != HUD_SLOT_PURPOSE_MINE ||
+        !item_has_function(slot->item, ITEM_FUNCTION_TOOL) ||
+        slot->item->maxDurability <= 0)
+        return;
+
+    slot->item->durability--;
+    if (slot->item->durability > 0)
+        return;
+
+    item_destroy(slot->item);
+    slot_set_item(slot, NULL);
+    player->inventory->hud->selectedInfo = NULL;
+    player->state = PLAYER_IDLE;
+}
+
 Player* player_create(ItemRegistry* itemReg, TextureManager* texmgr){
     Player* player = (Player*)malloc(sizeof(Player));
     if (!player)
@@ -383,14 +404,14 @@ void player_cancel(Player* player){
     }
 }
 
-void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int x, int y, int button){
+void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int x, int y, int button, int shift){
     if(!map || !player){
         return;
     }
 
     if(player->inventory->shown){
         if(button & 1){
-            inventory_click(itemReg, player->inventory, x, y);
+            inventory_click(itemReg, player->inventory, x, y, shift);
         }
     }else{
         int wx = x + player->vp.Left;
@@ -414,6 +435,7 @@ void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map
                                     map_remove_machine(map, tx, ty);
                                     set_tile(map, NULL, tx, ty, z);
                                 }
+                                player_damage_mining_tool(player);
                                 return;
                             }
                         }
