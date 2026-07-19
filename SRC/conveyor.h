@@ -8,7 +8,6 @@ int is_splitter(Machine* machine);
 void conveyor_update(Machine* machine, struct Map* map);
 void* conveyor_get_data();
 void conveyor_refresh(Machine* machine, struct Map* map);
-void conveyor_refresh_near(struct Map* map, int x, int y);
 int conveyor_try_dispatch_item(Machine* machine, struct Map* map, Slot* slot, int position, int* dispatchMs, int elapsedMs);
 int conveyor_try_take_item(Machine* machine, struct Map* map, Slot* slot, int position, int* dispatchMs, int elapsedMs, DroppedItemFilter filter, void* context);
 

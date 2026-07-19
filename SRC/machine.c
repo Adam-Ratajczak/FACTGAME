@@ -3,6 +3,7 @@
 #include "mine.h"
 #include "chest.h"
 #include "conveyor.h"
+#include "crafters.h"
 #include "map.h"
 #include <stdlib.h>
 #include <string.h>
@@ -61,6 +62,7 @@ Machine* machine_create(TextureManager* texmgr, ItemRegistry* itemReg, int x, in
     case OVERLAY_CONVEYOR_BELT:
         machine->update = conveyor_update;
         machine->data = conveyor_get_data();
+        machine->refresh = conveyor_refresh;
         break;
     case OVERLAY_FURNACE:
         machine->update = furnace_update;
@@ -80,6 +82,18 @@ Machine* machine_create(TextureManager* texmgr, ItemRegistry* itemReg, int x, in
     case OVERLAY_SPLITTER:
         machine->update = splitter_update;
         machine->data = splitter_get_data(texmgr);
+        machine->refresh = splitter_refresh;
+        break;
+    case OVERLAY_CRAFTER_HEAD:
+        machine->update = crafter_head_update;
+        machine->inventory = crafter_head_create_inventory(texmgr);
+        machine->data = crafter_head_get_data();
+        break;
+    case OVERLAY_CRAFTER_MODULE:
+        machine->update = crafter_module_update;
+        machine->inventory = crafter_module_create_inventory(texmgr);
+        machine->data = crafter_module_get_data();
+        machine->refresh = crafter_module_refresh;
         break;
     default:
         machine->update = NULL;
@@ -113,6 +127,24 @@ void machine_update(Machine* machine, struct Map* map)
 {
     if (machine && machine->update)
         machine->update(machine, map);
+}
+
+void machine_refresh_near(Map* map, int x, int y)
+{
+    if (!map)
+        return;
+
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            if (dx != 0 && dy != 0)
+                continue;
+
+            Machine* machine = map_get_machine(map, x + dx, y + dy);
+
+            if (machine && machine->refresh)
+                machine->refresh(machine, map);
+        }
+    }
 }
 
 Entity* get_preview_entity(TextureManager* texmgr, int overlayId){

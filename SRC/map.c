@@ -5,7 +5,6 @@
 #include "zlib.h"
 #include "perlin.h"
 #include "alwrap.h"
-#include "conveyor.h"
 
 static unsigned int chunk_hash(int chunkX, int chunkY)
 {
@@ -770,7 +769,7 @@ int map_place_machine(TextureManager* texmgr, ItemRegistry* itemReg, Map* map, i
     map->machines = grown;
     map->machines[map->machineCount++] = machine;
     set_tile(map, tile, x, y, ZINDEX_OVERLAY);
-    conveyor_refresh_near(map, x, y);
+    machine_refresh_near(map, x, y);
 
     return 1;
 }
@@ -803,7 +802,7 @@ void map_remove_machine(Map* map, int x, int y)
         }
 
         set_tile(map, NULL, x, y, ZINDEX_OVERLAY);
-        conveyor_refresh_near(map, x, y);
+        machine_refresh_near(map, x, y);
         return;
     }
 }

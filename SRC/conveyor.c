@@ -260,27 +260,6 @@ void conveyor_refresh(Machine* machine, struct Map* map)
     }
 }
 
-void conveyor_refresh_near(Map* map, int x, int y)
-{
-    if (!map)
-        return;
-
-    for (int dy = -1; dy <= 1; ++dy) {
-        for (int dx = -1; dx <= 1; ++dx) {
-            if (dx != 0 && dy != 0)
-                continue;
-
-            Machine* machine = map_get_machine(map, x + dx, y + dy);
-            if(is_conveyor(machine)){
-                conveyor_refresh(map_get_machine(map, x + dx, y + dy), map);
-            }
-            if(is_splitter(machine)){
-                splitter_refresh(map_get_machine(map, x + dx, y + dy), map);
-            }
-        }
-    }
-}
-
 void conveyor_update(Machine* machine, struct Map* map)
 {
     if (!is_conveyor(machine) || !map || !machine->data)
@@ -501,7 +480,7 @@ void* splitter_get_data(TextureManager* texmgr)
 
 void splitter_refresh(Machine* machine, struct Map* map)
 {
-    if (!machine || !map || !machine->data)
+    if (!machine || !map || !machine->data || !is_splitter(machine))
         return;
 
     SplitterData* data = machine->data;
