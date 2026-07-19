@@ -46,6 +46,7 @@ static void player_clear_machine_preview(Player* player)
 
     player->machinePreviewCanPlace = 0;
     player->machinePreviewOverlayId = -1;
+    player->machinePreviewStep = 0;
 
     if (player->machinePreview) {
         destroy_entity(player->machinePreview);

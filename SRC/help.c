@@ -18,8 +18,6 @@ Help* help_create()
 
     help_page_add_line(page, "FACTGAME");
     help_page_add_line(page, "");
-    help_page_add_line(page, "Welcome to FACTGAME!");
-    help_page_add_line(page, "");
     help_page_add_line(page, "Controls:");
     help_page_add_line(page, "WSAD  - Move");
     help_page_add_line(page, "E     - Inventory");
@@ -30,6 +28,8 @@ Help* help_create()
     help_page_add_line(page, "1-6   - Select hotbar slot");
     help_page_add_line(page, "Esc   - Cancel");
     help_page_add_line(page, "X     - Exit game");
+    help_page_add_line(page, "Z     - Cheat mode");
+    help_page_add_line(page, "C     - Toggle music (ON/OFF)");
     help_page_add_line(page, "");
     help_page_add_line(page, "Use <- and -> to change pages.");
 
@@ -134,6 +134,19 @@ Help* help_create()
     help_page_add_line(page, "Mining Orb");
     help_page_add_line(page, "  4 Circuit + 4 Gear");
     help_page_add_line(page, "  + 6 Iron");
+    help_page_add_line(page, "");
+    help_page_add_line(page, "Credits on next page...");
+
+    help_add_page(help, page);
+
+    page = help_page_create();
+
+    help_page_add_line(page, "Credits:");
+    help_page_add_line(page, "");
+    help_page_add_line(page, "Graphics      - Adam Ratajczak");
+    help_page_add_line(page, "Code          - Adam Ratajczak");
+    help_page_add_line(page, "Mechanics     - Adam Ratajczak");
+    help_page_add_line(page, "Music         - Mike Ratajczak");
     help_page_add_line(page, "");
     help_page_add_line(page, "Good luck!");
 

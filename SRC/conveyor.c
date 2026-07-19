@@ -5,7 +5,7 @@
 #include <string.h>
 #include <time.h>
 
-#define CONVEYOR_MOVE_TICKS 30
+#define CONVEYOR_MOVE_TICKS 10
 #define CONVEYOR_MOVE_MS 500
 
 typedef struct {

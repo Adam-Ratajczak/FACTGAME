@@ -64,7 +64,6 @@ void run_game(){
         return;
     }
 
-    show_mouse(screen);
     set_mouse_range(0, 0, SCREEN_W - 1, SCREEN_H - 1);
 
     TextureManager* texmgr = create_texture_manager();
@@ -98,7 +97,6 @@ void run_game(){
 
     char prev_key[KEY_MAX];
     memset(prev_key, 0, sizeof(prev_key));
-    position_mouse(SCREEN_W / 2, SCREEN_H / 2);
     int prev_mouse_b = 0;
 
     int opened_help = 0;
@@ -111,6 +109,7 @@ void run_game(){
         music_playing = 1;
     }
 
+    BITMAP* cursor_bitmap = load_texture(texmgr, "ASSETS/TEXTURES/cursor.pcx");
     while (!key[KEY_X]) {
         poll_mouse();
 
@@ -200,11 +199,11 @@ void run_game(){
                     -1);
             }
 
+            draw_sprite(back_buffer, cursor_bitmap, mouse_x - 4, mouse_y - 4);
+
             vsync();
 
-            scare_mouse();
             blit(back_buffer, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H);
-            unscare_mouse();
 
             refresh = 0;
         }
@@ -222,5 +221,4 @@ cleanup:
     entity_renderer_shutdown();
     destroy_bitmap(back_buffer);
     back_buffer = NULL;
-    show_mouse(NULL);
 }
