@@ -142,6 +142,11 @@ Map* create_map(){
     map->machineCount = 0;
     map->machines = NULL;
     map->frame = 0;
+    do {
+        map->seed_height = rand();
+    } while ((perlin2d(0, 0, 0.003f, 4, map->seed_height) + 1.0f) * 0.5f < 0.30f);
+    map->seed_humidity = rand();
+    map->seed_ore = rand();
 
     return map;
 }
@@ -300,7 +305,7 @@ void map_update(Map* map){
     map->frame++;
 }
 
-static int ensure_chunk_tiles(TextureManager* texmgr, Chunk* chunk) {
+static int ensure_chunk_tiles(TextureManager* texmgr, Map* map, Chunk* chunk) {
     if (chunk->Tiles[0])
         return 1;
 
@@ -317,9 +322,6 @@ static int ensure_chunk_tiles(TextureManager* texmgr, Chunk* chunk) {
 
     const float geo_freq = 0.003f;
     const int geo_depth = 4;
-    const int seed_height = 12345;
-    const int seed_humidity = 54321;
-    const int seed_ore = 99999;
 
     for (int y = 0; y < CHUNK_SIZE; y++) {
         for (int x = 0; x < CHUNK_SIZE; x++) {
@@ -328,8 +330,8 @@ static int ensure_chunk_tiles(TextureManager* texmgr, Chunk* chunk) {
             int wx = chunk->X * CHUNK_SIZE + x;
             int wy = chunk->Y * CHUNK_SIZE + y;
 
-            float height = (perlin2d(wx, wy, geo_freq, geo_depth, seed_height) + 1.0f) * 0.5f;
-            float humidity = (perlin2d(wx, wy, geo_freq, geo_depth, seed_humidity) + 1.0f) * 0.5f;
+            float height = (perlin2d(wx, wy, geo_freq, geo_depth, map->seed_height) + 1.0f) * 0.5f;
+            float humidity = (perlin2d(wx, wy, geo_freq, geo_depth, map->seed_humidity) + 1.0f) * 0.5f;
 
             int tile = BLOCK_BARELAND;
 
@@ -374,7 +376,7 @@ static int ensure_chunk_tiles(TextureManager* texmgr, Chunk* chunk) {
             }
 
             if (tile == BLOCK_STONE || tile == BLOCK_BARELAND) {
-                float ore_val = (perlin2d(wx, wy, 0.09f, 3, seed_ore) + 1.0f) * 0.5f;
+                float ore_val = (perlin2d(wx, wy, 0.09f, 3, map->seed_ore) + 1.0f) * 0.5f;
 
                 if (ore_val > 0.82f) {
                     int ore_type = -1;
@@ -383,7 +385,7 @@ static int ensure_chunk_tiles(TextureManager* texmgr, Chunk* chunk) {
                     int sector_x = wx >= 0 ? (wx / sector_size) : ((wx - sector_size + 1) / sector_size);
                     int sector_y = wy >= 0 ? (wy / sector_size) : ((wy - sector_size + 1) / sector_size);
 
-                    unsigned int sector_hash = (unsigned int)(sector_x * 73856093 ^ sector_y * 19349663 ^ seed_ore);
+                    unsigned int sector_hash = (unsigned int)(sector_x * 73856093 ^ sector_y * 19349663 ^ map->seed_ore);
                     int ore_roll = sector_hash % 3; // 3 types of ore: Coal, Iron, Copper
 
                     if (ore_roll == 0) {
@@ -463,7 +465,7 @@ Chunk* create_chunk(TextureManager* texmgr, Map* map, int chunkX, int chunkY) {
 
     map->Chunks[map->chunkCount++] = chunk;
 
-    if (!ensure_chunk_tiles(texmgr, chunk)) {
+    if (!ensure_chunk_tiles(texmgr, map, chunk)) {
         map->chunkCount--;
         map->Chunks[map->chunkCount] = NULL;
         free(chunk);
@@ -822,9 +824,26 @@ int map_can_place_machine(Map* map, int x, int y)
     return 1;
 }
 
+int map_is_water(Map* map, int x, int y)
+{
+    Tile* ground = get_tile(map, x, y, ZINDEX_GROUND);
+    return ground && ground->TexID == BLOCK_WATER;
+}
+
+int map_can_place_machine_type(Map* map, int x, int y, int overlayId)
+{
+    (void)overlayId;
+
+    if (!map_can_place_machine(map, x, y))
+        return 0;
+
+    return !map_is_water(map, x, y);
+}
+
 int map_place_machine(TextureManager* texmgr, ItemRegistry* itemReg, Map* map, int x, int y, int overlayId, int rotation)
 {
-    if (!texmgr || !itemReg || !map || !map_can_place_machine(map, x, y))
+    if (!texmgr || !itemReg || !map ||
+        !map_can_place_machine_type(map, x, y, overlayId))
         return 0;
 
     if (!get_chunk(map, div_floor(x, CHUNK_SIZE), div_floor(y, CHUNK_SIZE)))
@@ -857,7 +876,9 @@ int map_place_machine(TextureManager* texmgr, ItemRegistry* itemReg, Map* map, i
 }
 
 int map_place_tunnel(TextureManager* texmgr, ItemRegistry* itemReg, Map* map, int x1, int y1, int x2, int y2, int rotation){
-    if (!texmgr || !itemReg || !map || !map_can_place_machine(map, x1, y1) || !map_can_place_machine(map, x2, y2))
+    if (!texmgr || !itemReg || !map ||
+        !map_can_place_machine_type(map, x1, y1, OVERLAY_CONVEYOR_TUNNEL_IN) ||
+        !map_can_place_machine_type(map, x2, y2, OVERLAY_CONVEYOR_TUNNEL_OUT))
         return 0;
 
     if (!get_chunk(map, div_floor(x1, CHUNK_SIZE), div_floor(y1, CHUNK_SIZE)) || !get_chunk(map, div_floor(x2, CHUNK_SIZE), div_floor(y2, CHUNK_SIZE)))

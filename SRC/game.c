@@ -57,6 +57,9 @@ void run_game(){
         log_debug("Failed to create map!\n");
         goto cleanup;
     }
+    player->x = TILE_SIZE / 2;
+    player->y = TILE_SIZE / 2;
+    player_update(texmgr, player);
     ensure_visible_chunks(texmgr, map, &player->vp);
 
     int event_delay = 1;
@@ -112,7 +115,7 @@ void run_game(){
             if (KEY_PRESSED(KEY_RIGHT)) help_next_page(help);
 
             if (KEY_PRESSED(KEY_ESC)){
-                player_cancel(player);
+                player_cancel(itemReg, player);
                 help_hide(help);
             }
 
@@ -127,7 +130,7 @@ void run_game(){
             }
 
             if (dx_input != 0 || dy_input != 0) {
-                player_move(player, dx_input, dy_input);
+                player_move(map, player, dx_input, dy_input);
 
                 ensure_visible_chunks(texmgr, map, &player->vp);
             }

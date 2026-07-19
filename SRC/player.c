@@ -58,15 +58,33 @@ static void player_clear_machine_preview(Player* player)
     }
 }
 
-static int player_can_place_machine_at(Map* map, Player* player, int tx, int ty)
+static int overlay_allows_player_overlap(int overlayId)
+{
+    return overlayId == OVERLAY_CONVEYOR_BELT ||
+           overlayId == OVERLAY_CONVEYOR_TUNNEL ||
+           overlayId == OVERLAY_CONVEYOR_TUNNEL_IN ||
+           overlayId == OVERLAY_CONVEYOR_TUNNEL_OUT;
+}
+
+static int player_can_place_machine_at(Map* map, Player* player, int tx, int ty, int overlayId)
 {
     if (!map || !player)
         return 0;
 
-    if (tx == player_tile_x(player) && ty == player_tile_y(player))
-        return 0;
+    if (!overlay_allows_player_overlap(overlayId)) {
+        int tileLeft = tx * TILE_SIZE;
+        int tileTop = ty * TILE_SIZE;
+        int tileRight = tileLeft + TILE_SIZE - 1;
+        int tileBottom = tileTop + TILE_SIZE - 1;
 
-    return map_can_place_machine(map, tx, ty);
+        if (player->x + PLAYER_HITBOX_HALF_WIDTH >= tileLeft &&
+            player->x - PLAYER_HITBOX_HALF_WIDTH <= tileRight &&
+            player->y + PLAYER_HITBOX_HALF_HEIGHT >= tileTop &&
+            player->y - PLAYER_HITBOX_HALF_HEIGHT <= tileBottom)
+            return 0;
+    }
+
+    return map_can_place_machine_type(map, tx, ty, overlayId);
 }
 
 static void player_update_machine_preview(ItemRegistry* itemReg, TextureManager* texmgr, Map* map, Player* player, int mouseX, int mouseY)
@@ -96,7 +114,7 @@ static void player_update_machine_preview(ItemRegistry* itemReg, TextureManager*
         player->machinePreview->x = tx * TILE_SIZE;
         player->machinePreview->y = ty * TILE_SIZE;
         player->machinePreview->angle = player->machinePreviewRotation;
-        player->machinePreviewCanPlace = player_can_place_machine_at(map, player, tx, ty);
+        player->machinePreviewCanPlace = player_can_place_machine_at(map, player, tx, ty, overlayId);
     }else{
         if (player->machinePreviewOverlayId != OVERLAY_CONVEYOR_TUNNEL_IN && player->machinePreviewOverlayId != OVERLAY_CONVEYOR_TUNNEL_OUT) {
             player_clear_machine_preview(player);
@@ -136,7 +154,7 @@ static void player_update_machine_preview(ItemRegistry* itemReg, TextureManager*
         player->machinePreviewSecondary->x = endTx * TILE_SIZE;
         player->machinePreviewSecondary->y = endTy * TILE_SIZE;
         player->machinePreviewSecondary->angle = player->machinePreviewRotation;
-        player->machinePreviewSecondaryCanPlace = player_can_place_machine_at(map, player, endTx, endTy);
+        player->machinePreviewSecondaryCanPlace = player_can_place_machine_at(map, player, endTx, endTy, overlayId);
     }
 }
 
@@ -263,8 +281,33 @@ void player_update(TextureManager* texmgr, Player* player){
     player->vp.Top = player->y - SCREEN_H / 2.0;
 }
 
-void player_move(Player* player, int dx, int dy) {
-    if (!player) {
+static int player_position_blocked(Map* map, int x, int y)
+{
+    const int corners[4][2] = {
+        {-PLAYER_HITBOX_HALF_WIDTH, -PLAYER_HITBOX_HALF_HEIGHT},
+        { PLAYER_HITBOX_HALF_WIDTH, -PLAYER_HITBOX_HALF_HEIGHT},
+        {-PLAYER_HITBOX_HALF_WIDTH,  PLAYER_HITBOX_HALF_HEIGHT},
+        { PLAYER_HITBOX_HALF_WIDTH,  PLAYER_HITBOX_HALF_HEIGHT}
+    };
+
+    for (int i = 0; i < 4; ++i) {
+        int tx = div_floor(x + corners[i][0], TILE_SIZE);
+        int ty = div_floor(y + corners[i][1], TILE_SIZE);
+        Machine* machine;
+
+        if (map_is_water(map, tx, ty))
+            return 1;
+
+        machine = map_get_machine(map, tx, ty);
+        if (machine && !overlay_allows_player_overlap(machine->overlayId))
+            return 1;
+    }
+
+    return 0;
+}
+
+void player_move(Map* map, Player* player, int dx, int dy) {
+    if (!map || !player) {
         return;
     }
 
@@ -287,8 +330,22 @@ void player_move(Player* player, int dx, int dy) {
         move_y = (move_y / length) * speed;
     }
 
-    player->x += (int)(move_x + 0.5);
-    player->y += (int)(move_y + 0.5);
+    int stepX = move_x >= 0.0 ? (int)(move_x + 0.5) : (int)(move_x - 0.5);
+    int stepY = move_y >= 0.0 ? (int)(move_y + 0.5) : (int)(move_y - 0.5);
+    int moved = 0;
+
+    if (!player_position_blocked(map, player->x + stepX, player->y)) {
+        player->x += stepX;
+        moved = stepX != 0;
+    }
+
+    if (!player_position_blocked(map, player->x, player->y + stepY)) {
+        player->y += stepY;
+        moved = moved || stepY != 0;
+    }
+
+    if (!moved)
+        return;
 
     if(player->walkingState == 0){
         player->walkingState = 1;
@@ -387,19 +444,21 @@ void player_toggle_inventory(ItemRegistry* itemReg, Player* player){
 
     if(player->inventory->shown == 1){
         inventory_hide(player->inventory);
+        player_select_hud_slot(itemReg, player, player->inventory->hud->selected);
     }else{
         inventory_show(itemReg, player->inventory, NULL);
         player_clear_machine_preview(player);
     }
 }
 
-void player_cancel(Player* player){
+void player_cancel(ItemRegistry* itemReg, Player* player){
     if(!player){
         return;
     }
 
     if(player->inventory->shown == 1){
         inventory_hide(player->inventory);
+        player_select_hud_slot(itemReg, player, player->inventory->hud->selected);
         player_clear_machine_preview(player);
     }
 }
@@ -450,7 +509,7 @@ void player_mouse_action(ItemRegistry* itemReg, TextureManager* texmgr, Map* map
                         int tx = div_floor(wx, TILE_SIZE);
                         int ty = div_floor(wy, TILE_SIZE);
 
-                        if(slot && player_can_place_machine_at(map, player, tx, ty)){
+                        if(slot && player_can_place_machine_at(map, player, tx, ty, overlayId)){
                             if(overlayId == OVERLAY_CONVEYOR_TUNNEL_IN){
                                 player->machinePreviewStep = 1;
                                 return;

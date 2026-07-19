@@ -1,10 +1,13 @@
 #include "alwrap.h"
 #include "game.h"
 #include <stdio.h>
+#include <random.h>
+#include <time.h>
 #include "log.h"
 
 int main(void) {
     log_clear();
+    srand(time(NULL));
 
     allegro_init();
     install_keyboard();
