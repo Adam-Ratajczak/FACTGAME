@@ -176,6 +176,9 @@ Player* player_create(ItemRegistry* itemReg, TextureManager* texmgr){
     player->machinePreviewSecondaryCanPlace = 0;
     player->machinePreviewRotation = 0;
     player->machinePreviewStep = 0;
+    player->hoveredMachineX = 0;
+    player->hoveredMachineY = 0;
+    player->hasHoveredMachine = 0;
     player->entity = create_entity(0, 0, 16, 16);
     if (!player->entity) {
         free(player);
@@ -301,6 +304,20 @@ void player_render(BITMAP* scr, Player* player){
     }
 
     render_entity(scr, player->entity, &player->vp);
+
+    if (!player->inventory->shown && player->hasHoveredMachine) {
+        int promptX = player->hoveredMachineX * TILE_SIZE + TILE_SIZE / 2 - player->vp.Left;
+        int promptY = player->hoveredMachineY * TILE_SIZE - player->vp.Top - text_height(font) - 3;
+        textout_centre_ex(
+            scr,
+            font,
+            "Press F to open",
+            promptX,
+            promptY,
+            makecol(255, 255, 255),
+            makecol(0, 0, 0));
+    }
+
     inventory_render(scr, player->inventory);
 }
 
@@ -448,6 +465,24 @@ void player_mouse_move_action(ItemRegistry* itemReg, TextureManager* texmgr, Map
     int wx = x + player->vp.Left;
     int wy = y + player->vp.Top;
 
+    player->hasHoveredMachine = 0;
+    if (!player->inventory->shown && map) {
+        int tx = div_floor(wx, TILE_SIZE);
+        int ty = div_floor(wy, TILE_SIZE);
+        int centerX = tx * TILE_SIZE + TILE_SIZE / 2;
+        int centerY = ty * TILE_SIZE + TILE_SIZE / 2;
+        Machine* machine = map_get_machine(map, tx, ty);
+
+        if (machine && machine->inventory &&
+            (player->x - centerX) * (player->x - centerX) +
+            (player->y - centerY) * (player->y - centerY) <=
+                PLAYER_MINING_RADIUS * PLAYER_MINING_RADIUS) {
+            player->hoveredMachineX = tx;
+            player->hoveredMachineY = ty;
+            player->hasHoveredMachine = 1;
+        }
+    }
+
     player->rot = atan2(wy - player->y, wx - player->x);
     if(isnan(player->rot)){
         player->rot = M_PI / 2;
@@ -521,20 +556,17 @@ void player_open_machine(ItemRegistry* itemReg, Map* map, Player* player){
         return;
     }
 
-    int tx = player->x / TILE_SIZE;
-    int ty = player->y / TILE_SIZE;
-        for(int x = tx - 1; x <= tx + 1; x++){
-            for(int y = ty - 1; y <= ty + 1; y++){
-                Machine* machine = map_get_machine(map, x, y);
-                if(!machine){
-                    continue;
-                }
+    if (player->inventory->shown || !player->hasHoveredMachine)
+        return;
 
-                if(machine->inventory){
-                    inventory_show(machine->itemReg, player->inventory, machine->inventory);
-                    return;
-                }
-            }
-        }
+    Machine* machine = map_get_machine(
+        map,
+        player->hoveredMachineX,
+        player->hoveredMachineY);
 
+    if (!machine || !machine->inventory)
+        return;
+
+    inventory_show(itemReg, player->inventory, machine->inventory);
+    player->hasHoveredMachine = 0;
 }

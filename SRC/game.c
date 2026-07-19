@@ -71,6 +71,13 @@ void run_game(){
     int opened_help = 0;
     Help* help = help_create();
 
+    int music_playing = 0;
+    MIDI *music = load_midi("ASSETS/MUSIC/track.mid");
+    if (music) {
+        play_midi(music, TRUE);
+        music_playing = 1;
+    }
+
     while (!key[KEY_X]) {
         poll_mouse();
 
@@ -109,6 +116,16 @@ void run_game(){
                 help_hide(help);
             }
 
+            if (KEY_PRESSED(KEY_C)){
+                if(music_playing){
+                    stop_midi();
+                    music_playing = 0;
+                }else{
+                    play_midi(music, TRUE);
+                    music_playing = 1;
+                }
+            }
+
             if (dx_input != 0 || dy_input != 0) {
                 player_move(player, dx_input, dy_input);
 
@@ -134,6 +151,7 @@ void run_game(){
             clear_to_color(back_buffer, makecol(0, 0, 0));
 
             render_map(back_buffer, map, &player->vp);
+            render_dropped_items(back_buffer, map, &player->vp);
             player_render(back_buffer, player);
 
             help_render(back_buffer, help);
@@ -160,6 +178,9 @@ void run_game(){
     }
 
 cleanup:
+    stop_midi();
+    destroy_midi(music);
+
     help_destroy(help);
     player_destroy(player);
     destroy_map(map);

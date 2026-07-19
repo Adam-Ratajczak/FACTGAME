@@ -22,6 +22,14 @@ int is_splitter(Machine* machine){
     return machine && machine->overlayId == OVERLAY_SPLITTER;
 }
 
+int conveyor_accepts_input_at(Machine* machine, int x, int y)
+{
+    if (!is_conveyor(machine))
+        return 0;
+
+    return machine->X == x && machine->Y == y;
+}
+
 static void conveyor_direction(int rotation, int* dx, int* dy)
 {
     *dx = 0;
@@ -60,6 +68,8 @@ static int conveyor_outputs_to(Machine* machine, int x, int y, int* fromDx, int*
 {
     int dx = 0;
     int dy = 0;
+    int outputDx = 0;
+    int outputDy = 0;
     ConveyorData* data = NULL;
 
     if (!is_conveyor(machine))
@@ -76,10 +86,19 @@ static int conveyor_outputs_to(Machine* machine, int x, int y, int* fromDx, int*
     if (machine->X + dx != x || machine->Y + dy != y)
         return 0;
 
+    if (machine->overlayId == OVERLAY_CONVEYOR_TUNNEL &&
+        machine->hasSecondaryPosition && data) {
+        outputDx = data->destinationX - machine->secondaryX;
+        outputDy = data->destinationY - machine->secondaryY;
+    } else {
+        outputDx = dx;
+        outputDy = dy;
+    }
+
     if (fromDx)
-        *fromDx = machine->X - x;
+        *fromDx = -outputDx;
     if (fromDy)
-        *fromDy = machine->Y - y;
+        *fromDy = -outputDy;
 
     return 1;
 }
@@ -182,7 +201,7 @@ void* conveyor_get_data()
 
 void conveyor_refresh(Machine* machine, struct Map* map)
 {
-    if (!is_conveyor(machine) || !map || !machine->data)
+    if (!machine || machine->overlayId != OVERLAY_CONVEYOR_BELT || !map || !machine->data)
         return;
 
     int outDx = 0;
@@ -242,18 +261,13 @@ void conveyor_refresh(Machine* machine, struct Map* map)
 
         Tile* tile = get_tile(map, machine->X, machine->Y, ZINDEX_OVERLAY);
         if (tile && tile->Entity) {
-            if (tile->Entity->angle != angle) {
-                tile->Entity->angle = angle;
-                map_invalidate_tile(map, machine->X, machine->Y);
-            }
+            tile->Entity->angle = angle;
         }
     } else {
         machine_set_overlay_state(machine, map, OVERLAY_CONVEYOR_BELT_STRAIGHT);
         Tile* tile = get_tile(map, machine->X, machine->Y, ZINDEX_OVERLAY);
-        if (tile && tile->Entity && tile->Entity->angle != machine->rotation) {
+        if (tile && tile->Entity)
             tile->Entity->angle = machine->rotation;
-            map_invalidate_tile(map, machine->X, machine->Y);
-        }
     }
 }
 
@@ -280,7 +294,8 @@ void conveyor_update(Machine* machine, struct Map* map)
     if (map->frame % CONVEYOR_MOVE_TICKS != 0)
         return;
 
-    if (!is_conveyor(map_get_machine(map, data->destinationX, data->destinationY)))
+    Machine* destination = map_get_machine(map, data->destinationX, data->destinationY);
+    if (!conveyor_accepts_input_at(destination, data->destinationX, data->destinationY))
         return;
 
     if (map_has_dropped_items(map, data->destinationX, data->destinationY))
@@ -295,8 +310,10 @@ void conveyor_update(Machine* machine, struct Map* map)
         return;
     }
 
-    if (!map_place_dropped_items(map, items, data->destinationX, data->destinationY))
+    if (!map_place_dropped_items(map, items, data->destinationX, data->destinationY)) {
+        map_place_dropped_items(map, items, machine->X, machine->Y);
         return;
+    }
 }
 
 static int slot_can_accept(Slot* slot, int itemId)
@@ -329,6 +346,8 @@ int conveyor_try_dispatch_item(Machine* machine, struct Map* map, Slot* slot, in
 {
     Machine* conveyor = NULL;
     Item* moving = NULL;
+    int targetX = 0;
+    int targetY = 0;
 
     if (!machine || !map || !slot || !slot->item || !dispatchMs)
         return 0;
@@ -340,8 +359,9 @@ int conveyor_try_dispatch_item(Machine* machine, struct Map* map, Slot* slot, in
     if (*dispatchMs < CONVEYOR_MOVE_MS)
         return 0;
 
-    conveyor = machine_get_relative_to(machine, map, position);
-    if (!is_conveyor(conveyor))
+    machine_get_relative_position(machine, position, &targetX, &targetY);
+    conveyor = map_get_machine(map, targetX, targetY);
+    if (!conveyor_accepts_input_at(conveyor, targetX, targetY))
         return 0;
 
     if (map_has_dropped_items(map, conveyor->X, conveyor->Y))
@@ -486,17 +506,25 @@ void splitter_refresh(Machine* machine, struct Map* map)
 
     for (int dir = MACHINE_POSITION_TOP; dir <= MACHINE_POSITION_LEFT; ++dir)
     {
+        int neighborX = 0;
+        int neighborY = 0;
         Machine* neighbor = machine_get_relative_to(machine, map, dir);
         if (!is_conveyor(neighbor))
             continue;
 
-        conveyor_refresh(neighbor, map);
+        machine_get_relative_position(machine, dir, &neighborX, &neighborY);
+        if (!conveyor_outputs_to(neighbor, machine->X, machine->Y, NULL, NULL) &&
+            !conveyor_accepts_input_at(neighbor, neighborX, neighborY))
+            continue;
+
+        if (neighbor->overlayId == OVERLAY_CONVEYOR_BELT)
+            conveyor_refresh(neighbor, map);
 
         data->connected[dir] = 1;
         connectedCount++;
     }
 
-    int overlay = OVERLAY_SPLITTER_ALL;
+    int overlay = OVERLAY_SPLITTER_I;
     int angle = 0;
 
     if (connectedCount == 4)
@@ -507,24 +535,30 @@ void splitter_refresh(Machine* machine, struct Map* map)
     {
         overlay = OVERLAY_SPLITTER_T;
 
-        if (!data->connected[MACHINE_POSITION_TOP])
+        /* Base T sprite is open north, east and south (closed west). */
+        if (!data->connected[MACHINE_POSITION_LEFT])
             angle = 0;
-        else if (!data->connected[MACHINE_POSITION_RIGHT])
+        else if (!data->connected[MACHINE_POSITION_TOP])
             angle = 90;
-        else if (!data->connected[MACHINE_POSITION_BOTTOM])
+        else if (!data->connected[MACHINE_POSITION_RIGHT])
             angle = 180;
         else
             angle = 270;
     }
-    else if (connectedCount == 2)
+    else
     {
         overlay = OVERLAY_SPLITTER_I;
 
-        if (data->connected[MACHINE_POSITION_LEFT] && data->connected[MACHINE_POSITION_RIGHT])
+        if ((data->connected[MACHINE_POSITION_LEFT] ||
+             data->connected[MACHINE_POSITION_RIGHT]) &&
+            !data->connected[MACHINE_POSITION_TOP] &&
+            !data->connected[MACHINE_POSITION_BOTTOM])
             angle = 90;
         else
             angle = 0;
     }
+
+    angle = normalize_rotation(angle + machine->rotation);
 
     machine_set_overlay_state(machine, map, overlay);
 
@@ -641,6 +675,9 @@ Machine* conveyor_tunnel_create(TextureManager* texmgr, ItemRegistry* itemReg, i
 
     machine->X = x1;
     machine->Y = y1;
+    machine->secondaryX = x2;
+    machine->secondaryY = y2;
+    machine->hasSecondaryPosition = 1;
     machine->rotation = rotation;
     machine->overlayId = OVERLAY_CONVEYOR_TUNNEL;
     machine->texmgr = texmgr;

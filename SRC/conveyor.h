@@ -5,6 +5,7 @@
 
 int is_conveyor(Machine* machine);
 int is_splitter(Machine* machine);
+int conveyor_accepts_input_at(Machine* machine, int x, int y);
 void conveyor_update(Machine* machine, struct Map* map);
 void* conveyor_get_data();
 void conveyor_refresh(Machine* machine, struct Map* map);

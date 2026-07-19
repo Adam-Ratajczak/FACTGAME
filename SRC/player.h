@@ -37,6 +37,10 @@ typedef struct
 
     int miningX;
     int miningY;
+
+    int hoveredMachineX;
+    int hoveredMachineY;
+    int hasHoveredMachine;
 } Player;
 
 Player* player_create(ItemRegistry* itemReg, TextureManager* texmgr);

@@ -156,7 +156,7 @@ MachineInventory* mine_create_inventory(TextureManager* texmgr){
     }
 
     int x = (SCREEN_W - INVENTORY_COLS * SLOT_SIZE) / 2;
-    int y = (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS) * SLOT_SIZE) / 2;
+    int y = (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS + 1) * SLOT_SIZE) / 2;
     machineInventory->slots[0] = slot_create(
         texmgr,
         HUD_SLOT_PURPOSE_CRAFT,

@@ -9,7 +9,7 @@
 #define HUD_SLOT_PURPOSE_BUILD      0x4
 
 #define INVENTORY_COLS  6
-#define INVENTORY_ROWS  4
+#define INVENTORY_ROWS  3
 #define CRAFTING_ROWS   3
 #define SLOT_SIZE       20
 

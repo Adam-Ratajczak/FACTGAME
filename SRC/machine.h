@@ -27,6 +27,9 @@ typedef struct {
     MachineInventory* inventory;
     MachineUpdateFunc update;
     MachineUpdateFunc refresh;
+    int secondaryX;
+    int secondaryY;
+    int hasSecondaryPosition;
 } Machine;
 
 Entity* get_preview_entity(TextureManager* texmgr, int overlayId);
@@ -43,6 +46,7 @@ void machine_set_overlay_state(Machine* machine, struct Map* map, int tileId);
 #define MACHINE_POSITION_LEFT 3
 
 Machine* machine_get_relative_to(Machine* machine, struct Map* map, int posId);
+void machine_get_relative_position(Machine* machine, int posId, int* x, int* y);
 void preview_direction(int rotation, int* dx, int* dy);
 
 #endif

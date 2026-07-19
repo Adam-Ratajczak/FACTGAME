@@ -56,6 +56,7 @@ void map_invalidate_tile(Map* map, int X, int Y);
 
 Map* create_map();
 void render_map(BITMAP* scr, Map* map, Box* vp);
+void render_dropped_items(BITMAP* scr, Map* map, Box* vp);
 void destroy_map(Map* map);
 void map_update(Map* map);
 

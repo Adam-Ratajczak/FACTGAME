@@ -63,16 +63,6 @@ static int crafter_head_add_output(Machine* machine, Slot* outputSlot, int outpu
     return 1;
 }
 
-static void crafter_head_consume_input(Slot* inputSlot, int amount)
-{
-    inputSlot->item->amount -= amount;
-
-    if (inputSlot->item->amount <= 0) {
-        item_destroy(inputSlot->item);
-        inputSlot->item = NULL;
-    }
-}
-
 static int find_crafter_head_recipe(ItemRegistry* itemReg, Slot** inputSlots, int inputCount, ItemRecipe** recipe, int* outputItemId){
     if(!itemReg || !inputSlots || !recipe || !outputItemId){
         return 0;
@@ -227,7 +217,7 @@ MachineInventory* crafter_head_create_inventory(TextureManager* texmgr){
         texmgr,
         HUD_SLOT_PURPOSE_CRAFT,
         (SCREEN_W - SLOT_SIZE) / 2,
-        (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS) * SLOT_SIZE) / 2,
+        (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS + 1) * SLOT_SIZE) / 2,
         NULL);
 
     if (!machineInventory->slots[0]) {
@@ -299,7 +289,7 @@ MachineInventory* crafter_module_create_inventory(TextureManager* texmgr){
         texmgr,
         HUD_SLOT_PURPOSE_NORMAL,
         (SCREEN_W - SLOT_SIZE) / 2,
-        (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS) * SLOT_SIZE) / 2,
+        (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS + 1) * SLOT_SIZE) / 2,
         NULL);
 
     if (!machineInventory->slots[0]) {

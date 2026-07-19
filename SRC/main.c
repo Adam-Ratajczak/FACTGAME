@@ -15,6 +15,11 @@ int main(void) {
         return 1;
     }
 
+    if (install_sound(DIGI_AUTODETECT, MIDI_AUTODETECT, NULL) != 0) {
+        log_debug("Failed to initialize sound: %s", allegro_error);
+        return 1;
+    }
+
     set_color_depth(32);
     if (set_gfx_mode(GFX_AUTODETECT, 320, 200, 0, 0) != 0) {
         log_debug("Couldn't initialize video");

@@ -215,6 +215,17 @@ void render_map(BITMAP* scr, Map* map, Box* vp){
         return;
     }
 
+    /* Only visible chunks benefit from retaining a pixel cache. Releasing
+       hidden caches keeps long-distance exploration from exhausting bitmap
+       or host graphics resources. */
+    for (int i = 0; i < map->chunkCount; ++i) {
+        Chunk* chunk = map->Chunks[i];
+        if (chunk->renderCache && !is_chunk_in_vp(chunk, vp)) {
+            destroy_bitmap(chunk->renderCache);
+            chunk->renderCache = NULL;
+        }
+    }
+
     int chunkPixels = CHUNK_SIZE * TILE_SIZE;
     int firstChunkX = div_floor(vp->Left, chunkPixels);
     int firstChunkY = div_floor(vp->Top, chunkPixels);
@@ -227,6 +238,15 @@ void render_map(BITMAP* scr, Map* map, Box* vp){
         }
     }
 
+}
+
+void render_dropped_items(BITMAP* scr, Map* map, Box* vp)
+{
+    if (!scr || !map || !vp)
+        return;
+
+    /* Dropped items are dynamic world objects. Keep them entirely outside
+       chunk pixel caches so movement and item changes appear immediately. */
     for(int i = 0; i < map->droppedItemCount; i++){
         for(int j = 0; j < map->droppedIems[i]->itemCount; j++){
             item_render(scr, map->droppedIems[i]->items[j], vp);
@@ -783,8 +803,11 @@ Machine* map_get_machine(Map* map, int x, int y)
         return NULL;
 
     for (int i = 0; i < map->machineCount; ++i) {
-        if (map->machines[i]->X == x && map->machines[i]->Y == y)
-            return map->machines[i];
+        Machine* machine = map->machines[i];
+        if ((machine->X == x && machine->Y == y) ||
+            (machine->hasSecondaryPosition &&
+             machine->secondaryX == x && machine->secondaryY == y))
+            return machine;
     }
 
     return NULL;
@@ -890,8 +913,16 @@ void map_remove_machine(Map* map, int x, int y)
     for (int i = 0; i < map->machineCount; ++i) {
         Machine* machine = map->machines[i];
 
-        if (machine->X != x || machine->Y != y)
+        if ((machine->X != x || machine->Y != y) &&
+            (!machine->hasSecondaryPosition ||
+             machine->secondaryX != x || machine->secondaryY != y))
             continue;
+
+        int primaryX = machine->X;
+        int primaryY = machine->Y;
+        int secondaryX = machine->secondaryX;
+        int secondaryY = machine->secondaryY;
+        int hasSecondaryPosition = machine->hasSecondaryPosition;
 
         machine_destroy(machine);
 
@@ -909,8 +940,13 @@ void map_remove_machine(Map* map, int x, int y)
                 map->machines = grown;
         }
 
-        set_tile(map, NULL, x, y, ZINDEX_OVERLAY);
-        machine_refresh_near(map, x, y);
+        set_tile(map, NULL, primaryX, primaryY, ZINDEX_OVERLAY);
+        machine_refresh_near(map, primaryX, primaryY);
+
+        if (hasSecondaryPosition) {
+            set_tile(map, NULL, secondaryX, secondaryY, ZINDEX_OVERLAY);
+            machine_refresh_near(map, secondaryX, secondaryY);
+        }
         return;
     }
 }

@@ -79,7 +79,7 @@ Inventory* inventory_create(ItemRegistry* itemReg, TextureManager* texmgr){
         inventory->craftingItemIds[i] = -1;
     }
 
-    int invHeight = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE;
+    int invHeight = (CRAFTING_ROWS + INVENTORY_ROWS + 1) * SLOT_SIZE;
     int y = (SCREEN_H - invHeight) / 2;
     for(int i = 0; i < CRAFTING_ROWS; ++i){
         int x = (SCREEN_W - INVENTORY_COLS * SLOT_SIZE) / 2;
@@ -89,6 +89,8 @@ Inventory* inventory_create(ItemRegistry* itemReg, TextureManager* texmgr){
         }
         y += SLOT_SIZE;
     }
+    y += SLOT_SIZE;
+
     for(int i = 0; i < INVENTORY_ROWS; ++i){
         int x = (SCREEN_W - INVENTORY_COLS * SLOT_SIZE) / 2;
         for(int j = 0; j < INVENTORY_COLS; ++j){
@@ -494,7 +496,7 @@ static void inventory_render_uncached(BITMAP* scr, Inventory* inventory)
     if(inventory->shown){
         if(inventory->machineInventory){
             int x = SCREEN_W / 2;
-            int y = (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS) * SLOT_SIZE) / 2 - 12;
+            int y = (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS + 1) * SLOT_SIZE) / 2 - 12;
 
             textout_centre_ex(
                 scr,
@@ -564,9 +566,8 @@ void inventory_render(BITMAP* scr, Inventory* inventory){
 
     if (!inventory->shown && inventory->hud->selectedInfo)
     {
-        int invHeight = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE;
         int x = SCREEN_W / 2;
-        int y = (CRAFTING_ROWS + INVENTORY_COLS) * SLOT_SIZE - text_height(font) - 8;
+        int y = (CRAFTING_ROWS + INVENTORY_ROWS + 1) * SLOT_SIZE - text_height(font) - 8;
 
         textout_centre_ex(
             scr,

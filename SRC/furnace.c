@@ -227,7 +227,7 @@ MachineInventory* furnace_create_inventory(TextureManager* texmgr){
     machineInventory->slotsCount = 0;
 
     int x = (SCREEN_W - INVENTORY_COLS * SLOT_SIZE) / 2;
-    int y = (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS) * SLOT_SIZE) / 2;
+    int y = (SCREEN_H - (CRAFTING_ROWS + INVENTORY_ROWS + 1) * SLOT_SIZE) / 2;
 
     machineInventory->slots = malloc(sizeof(Slot*) * 3);
     if(!machineInventory->slots){

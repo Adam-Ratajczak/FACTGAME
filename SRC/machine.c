@@ -169,13 +169,16 @@ Entity* get_preview_entity(TextureManager* texmgr, int overlayId){
     return entity;
 }
 
-Machine* machine_get_relative_to(Machine* machine, struct Map* map, int posId)
+void machine_get_relative_position(Machine* machine, int posId, int* x, int* y)
 {
-    if (!machine || !map)
-        return NULL;
-
     int dx = 0;
     int dy = 0;
+
+    if (!machine) {
+        if (x) *x = 0;
+        if (y) *y = 0;
+        return;
+    }
 
     switch ((posId + machine->rotation / 90) % 4)
     {
@@ -196,7 +199,21 @@ Machine* machine_get_relative_to(Machine* machine, struct Map* map, int posId)
             break;
     }
 
-    return map_get_machine(map, machine->X + dx, machine->Y + dy);
+    if (x) *x = machine->X + dx;
+    if (y) *y = machine->Y + dy;
+}
+
+Machine* machine_get_relative_to(Machine* machine, struct Map* map, int posId)
+{
+    int x = 0;
+    int y = 0;
+
+    if (!machine || !map)
+        return NULL;
+
+    machine_get_relative_position(machine, posId, &x, &y);
+
+    return map_get_machine(map, x, y);
 }
 
 void preview_direction(int rotation, int* dx, int* dy)
@@ -207,13 +224,13 @@ void preview_direction(int rotation, int* dx, int* dy)
         *dx = 1; *dy = 0;
         break;
     case 180:
-        *dx = 0; *dy = -1;
+        *dx = 0; *dy = 1;
         break;
     case 270:
         *dx = -1; *dy = 0;
         break;
     default:
-        *dx = 0; *dy = 1;
+        *dx = 0; *dy = -1;
         break;
     }
 }
