@@ -26,7 +26,7 @@ Help* help_create()
     help_page_add_line(page, "R     - Rotate blocks");
     help_page_add_line(page, "F     - Open machine's inventory");
     help_page_add_line(page, "1-6   - Select hotbar slot");
-    help_page_add_line(page, "Esc   - Cancel");
+    help_page_add_line(page, "Tab   - Cancel");
     help_page_add_line(page, "X     - Exit game");
     help_page_add_line(page, "Z     - Cheat mode");
     help_page_add_line(page, "C     - Toggle music (ON/OFF)");

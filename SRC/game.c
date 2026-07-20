@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "player.h"
 #include "help.h"
+#include "timestep.h"
 
 #define KEY_PRESSED(k) (key[(k)] && !prev_key[(k)])
 
@@ -103,14 +104,27 @@ void run_game(){
     Help* help = help_create();
 
     int music_playing = 0;
-    MIDI *music = load_midi("ASSETS/MUSIC/track.mid");
-    if (music) {
-        play_midi(music, TRUE);
+    log_debug("Loading sample");
+    SAMPLE *sample = load_sample("ASSETS/MUSIC/track.wav");
+    log_debug("Sample loaded");
+    if (sample) {
+        play_sample(sample, 255, 128, 1000, TRUE);
         music_playing = 1;
     }
 
+    int running = 1;
+
     BITMAP* cursor_bitmap = load_texture(texmgr, "ASSETS/TEXTURES/cursor.pcx");
-    while (!key[KEY_X]) {
+
+    timestep_init();
+    Timestep ts = timestep_new(60.0f);
+
+    while (running) {
+        while(timestep_on_tick(&ts)){
+            map_update(map);
+            player_update(texmgr, player);
+        }
+
         poll_mouse();
 
         if (event_timer >= event_delay) {
@@ -136,6 +150,8 @@ void run_game(){
             if (KEY_PRESSED(KEY_R)) player_rotate_preview(player);
             if (KEY_PRESSED(KEY_Z)) inventory_toggle_cheat_mode(itemReg, player->inventory);
 
+            if(KEY_PRESSED(KEY_X)) running = 0;
+
             if (KEY_PRESSED(KEY_H)) {
                 help_show(help);
                 opened_help = 1;
@@ -143,17 +159,17 @@ void run_game(){
             if (KEY_PRESSED(KEY_LEFT)) help_prev_page(help);
             if (KEY_PRESSED(KEY_RIGHT)) help_next_page(help);
 
-            if (KEY_PRESSED(KEY_ESC)){
+            if (KEY_PRESSED(KEY_TAB)){
                 player_cancel(itemReg, player);
                 help_hide(help);
             }
 
             if (KEY_PRESSED(KEY_C)){
                 if(music_playing){
-                    stop_midi();
+                    stop_sample(sample);
                     music_playing = 0;
                 }else{
-                    play_midi(music, TRUE);
+                    play_sample(sample, 255, 128, 1000, TRUE);
                     music_playing = 1;
                 }
             }
@@ -170,8 +186,6 @@ void run_game(){
                 prev_mouse_b = mouse_b;
             }
 
-            map_update(map);
-            player_update(texmgr, player);
             refresh = 1;
             event_timer = 0;
             memcpy(prev_key, key, sizeof(prev_key));
@@ -210,8 +224,8 @@ void run_game(){
     }
 
 cleanup:
-    stop_midi();
-    destroy_midi(music);
+    stop_sample(sample);
+    destroy_sample(sample);
 
     help_destroy(help);
     player_destroy(player);
